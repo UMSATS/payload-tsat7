@@ -1,0 +1,95 @@
+###############################################################################
+# Other
+###############################################################################
+*.swp
+*.bak
+**/bin/
+**/tmp/
+*.tmp
+
+###############################################################################
+# Eclipse (from: https://github.com/github/gitignore/blob/4488915eec0b3a45b5c63ead28f286819c0917de/Global/Eclipse.gitignore#L4)
+###############################################################################
+**/.metadata/
+**/.settings/
+**/.loadpath
+**/.recommenders
+
+# External tool builders
+**/.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific (C/C++ Development Tooling)
+**/.cproject
+
+# CDT- autotools
+**/.autotools
+
+# sbteclipse plugin
+**/.target
+
+# Tern plugin
+**/.tern-project
+
+# STS (Spring Tool Suite)
+**/.springBeans
+
+# Code Recommenders
+**/.recommenders/
+
+# Annotation Processing
+**/.apt_generated/
+**/.apt_generated_test/
+
+###############################################################################
+# STM32CubeIDE
+###############################################################################
+# Build Directories
+*/[Dd]ebug/
+*/[Rr]elease/
+
+###############################################################################
+# C (from: https://github.com/github/gitignore/blob/main/C.gitignore)
+###############################################################################
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*.bin
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
