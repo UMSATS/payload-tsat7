@@ -7,6 +7,9 @@
  *  Purpose: This is the driver file for the I2C multiplexer, part # TCA9548.
  */
 
+#ifndef TCA9548_H_
+#define TCA9548_H_
+
 #include <stdint.h>
 
 /**
@@ -15,3 +18,5 @@
  * @return -1 on error. 0 on success.
  */
 int TCA9548_set_i2c_channel(int channel_number);
+
+#endif
