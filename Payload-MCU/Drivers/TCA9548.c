@@ -12,9 +12,14 @@
 
 #include <stdint.h>
 
-#define TCA9548_ADDR 0x70 				// I2C address of the multiplexer
+static const uint16_t TCA9548_ADDR = 0x70; // I2C address of the multiplexer
+static const uint32_t TIMEOUT = 100;       // in ms
 
-// returns -1 on error
+/**
+ * @brief Sets the I2C channel for the multiplexer.
+ *
+ * @return -1 on error. 0 on success.
+ */
 int TCA9548_set_i2c_channel(int channel_number)
 {
 	if (channel_number < 0 || channel_number > 7)
@@ -26,7 +31,7 @@ int TCA9548_set_i2c_channel(int channel_number)
 	uint8_t command_register[1] = {channel_number};
 
 	// usage: i2c object, device addr, payload, payload size (bytes), timeout (ms)
-	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, TCA9548_ADDR, command_register, 1, 100);
+	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, TCA9548_ADDR, command_register, 1, TIMEOUT);
 
 	if (status != HAL_OK)
 	{

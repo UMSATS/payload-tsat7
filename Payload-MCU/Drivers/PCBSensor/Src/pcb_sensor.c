@@ -12,11 +12,17 @@
 #include <stdint.h>
 
 // how long to wait for a reading before trying again
-const uint32_t TIMEOUT = 1; // in ms
+static const uint32_t TIMEOUT = 1; // in ms
 
 // how many times to try getting a reading before giving up
-const unsigned short MAX_TRIES = 100;
+static const unsigned short MAX_TRIES = 100;
 
+/**
+ * @brief Gets a temperature reading from the on-board ADC
+ *
+ * @return 12 bit integer representation of the reading, or -1 if the operation
+ *         failed.
+ */
 int16_t pcb_sensor_read_temp()
 {
 	int16_t temp;

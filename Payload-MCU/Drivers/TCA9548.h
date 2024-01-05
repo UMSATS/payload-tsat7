@@ -19,4 +19,4 @@
  */
 int TCA9548_set_i2c_channel(int channel_number);
 
-#endif
+#endif /* TCA9548_H_ */
