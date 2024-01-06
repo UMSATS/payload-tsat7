@@ -1,5 +1,5 @@
 /*
- * TCA9539.c
+ * tca9539.c
  *
  *  Created on: Dec 18, 2023
  *      Author: Jacob Petersen
@@ -7,6 +7,7 @@
  *  Purpose: this is the driver file for the TCA9539 IO expander IC.
  */
 
+#include "tca9539.h"
 #include "i2c.h"
 
 #define IO_EX_ADDR_1 0x74 	// I2C address of expander 1 (wells 0-7)

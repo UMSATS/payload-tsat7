@@ -26,7 +26,8 @@ typedef enum {
 	WELL_12,
 	WELL_13,
 	WELL_14,
-	WELL_15
+	WELL_15,
+	WELL_16
 } WellID;
 
 /**
