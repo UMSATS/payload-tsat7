@@ -25,7 +25,7 @@ static const unsigned short MAX_TRIES = 100;
  */
 int16_t pcb_sensor_read_temp()
 {
-	int16_t temp;
+	int16_t temp; // return value.
 
 	// Perform self-calibration
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
