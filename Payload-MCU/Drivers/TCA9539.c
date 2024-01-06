@@ -71,10 +71,9 @@ void TCA9539_Init() {
  * Sets a specific pin "pin" in port "port" on device "device" to "value".
  */
 int TCA9539_Set_Pin(int device, int port, int pin, int value) {
-
 	// device 1 = wells 0-7, device 2 = wells 8-15
-	if ((device == 1 | device == 2) & (port == 0 | port == 1)
-			& (pin >= 0 & pin < 8) & (value == 0 | value == 1)) {
+	if ((device == 1 || device == 2) && (port == 0 || port == 1)
+			&& (pin >= 0 && pin < 8) && (value == 0 || value == 1)) {
 
 		uint8_t message_buffer[2];
 		uint8_t output_register;
@@ -88,7 +87,7 @@ int TCA9539_Set_Pin(int device, int port, int pin, int value) {
 		}
 
 		if (port == 0) {
-			message_buffer[0] = OUTPORT_PORT_0;
+			message_buffer[0] = OUTPUT_PORT_0_ADDR;
 		} else if (port == 1) {
 			message_buffer[0] = OUTPUT_PORT_1_ADDR;
 		}
@@ -121,9 +120,9 @@ int TCA9539_Set_Pin(int device, int port, int pin, int value) {
  */
 int TCA9539_Get_Pin(int device, int port, int pin) {
 
-	if ((device == 1 | device == 2) & (port == 0 | port == 1) & (pin >= 0 & pin < 8)) {
+	if ((device == 1 || device == 2) && (port == 0 || port == 1) && (pin >= 0 && pin < 8)) {
 
-		uint8_t message_buffer[2];
+		uint8_t message_buffer;
 		uint8_t device_addr;
 		uint8_t output_register;
 
@@ -140,7 +139,7 @@ int TCA9539_Get_Pin(int device, int port, int pin) {
 		}
 
 		// indicate to the device that we want to get the status of the output port and then receive it
-		HAL_I2C_Master_Transmit(&hi2c1, device_addr, message_buffer, 1, 100);
+		HAL_I2C_Master_Transmit(&hi2c1, device_addr, &message_buffer, 1, 100);
 		HAL_I2C_Master_Receive(&hi2c1, device_addr, &output_register, 1, 100);
 
 		if ((output_register & (1 << pin)) == 0) {
@@ -163,12 +162,12 @@ void TCA9539_Clear_Pins() {
 	message_buffer[1] = 0;
 
 	// clear port 0 on both devices
-	message_buffer[0] = OUTPORT_PORT_0;
+	message_buffer[0] = OUTPUT_PORT_0_ADDR;
 	HAL_I2C_Master_Transmit(&hi2c1, IO_EX_ADDR_1, message_buffer, 2, 100);
 	HAL_I2C_Master_Transmit(&hi2c1, IO_EX_ADDR_2, message_buffer, 2, 100);
 
 	// clear port 1 on both devices
-	message_buffer[0] = OUTPORT_PORT_1;
+	message_buffer[0] = OUTPUT_PORT_1_ADDR;
 	HAL_I2C_Master_Transmit(&hi2c1, IO_EX_ADDR_1, message_buffer, 2, 100);
 	HAL_I2C_Master_Transmit(&hi2c1, IO_EX_ADDR_2, message_buffer, 2, 100);
 }

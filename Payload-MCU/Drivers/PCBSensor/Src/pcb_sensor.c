@@ -35,8 +35,8 @@ int16_t pcb_sensor_read_temp()
 
 	// Poll for conversion with timeout
 	HAL_StatusTypeDef status = HAL_ADC_PollForConversion(&hadc1, TIMEOUT);
-	unsigned short i = 0;
 
+	unsigned short i = 0;
 	while (status != HAL_OK && i < MAX_TRIES)
 	{
 		status = HAL_ADC_PollForConversion(&hadc1, TIMEOUT);

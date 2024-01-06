@@ -1,5 +1,5 @@
 /*
- * TCA9548A.h
+ * tca9548.h
  *
  *  Created on: Nov 26, 2023
  *      Author: Jacob Petersen
