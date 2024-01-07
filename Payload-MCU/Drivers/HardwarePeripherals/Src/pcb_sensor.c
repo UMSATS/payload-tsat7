@@ -6,6 +6,7 @@
  */
 
 #include "pcb_sensor.h"
+#include "log.h"
 
 #include "adc.h"
 
@@ -54,7 +55,8 @@ int16_t pcb_sensor_read_temp()
 	}
 	else
 	{
-		// fail gracefully
+		// fail gracefully.
+		LOG_ERROR("failed to read temperature from PCB ADC.");
 		temp = -1;
 	}
 
