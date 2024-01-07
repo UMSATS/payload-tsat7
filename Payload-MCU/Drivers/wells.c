@@ -8,6 +8,7 @@
 
 #include "tca9548.h"
 #include "utils.h"
+#include "assert.h"
 
 #include "adc.h"
 #include "i2c.h"
@@ -75,6 +76,8 @@ const Location SENSOR_LOCATIONS[] = {
 
 uint16_t wells_get_temperature(WellID well_id)
 {
+	ASSERT(WELL_1 <= well_id && well_id <= WELL_16, "%d is not a valid well ID.", well_id);
+
 	uint16_t temp;
 
 	tca9548_set_i2c_channel(THERM_LOCATIONS[well_id].channel);
@@ -86,6 +89,8 @@ uint16_t wells_get_temperature(WellID well_id)
 
 uint16_t wells_get_light_level(WellID well_id)
 {
+	ASSERT(WELL_1 <= well_id && well_id <= WELL_16, "%d is not a valid well ID.", well_id);
+
 	uint16_t light;
 
 	tca9548_set_i2c_channel(SENSOR_LOCATIONS[well_id].channel);
