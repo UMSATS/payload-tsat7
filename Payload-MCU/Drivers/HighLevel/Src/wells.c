@@ -7,7 +7,6 @@
 #include "wells.h"
 
 #include "tca9548.h"
-#include "utils.h"
 #include "assert.h"
 
 #include "adc.h"
@@ -15,6 +14,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <utils.h>
 
 static const uint32_t TIMEOUT = 100; // in ms
 

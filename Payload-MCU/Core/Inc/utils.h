@@ -5,8 +5,8 @@
  *      Author: Logan Furedi
  */
 
-#ifndef UTILS_H_
-#define UTILS_H_
+#ifndef INC_UTILS_H_
+#define INC_UTILS_H_
 
 #include <stdint.h>
 
@@ -33,4 +33,4 @@ static inline uint32_t utils_be_to_native_32(const uint8_t *buf)
 	       (uint32_t)buf[3];
 }
 
-#endif /* UTILS_H_ */
+#endif /* INC_UTILS_H_ */
