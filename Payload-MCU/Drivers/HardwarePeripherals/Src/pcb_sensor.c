@@ -5,7 +5,7 @@
  *      Author: Logan Furedi, Jacob Petersen
  */
 
-#include "../../HardwarePeripherals/Inc/pcb_sensor.h"
+#include "pcb_sensor.h"
 
 #include "adc.h"
 
