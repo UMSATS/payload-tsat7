@@ -16,8 +16,8 @@ const uint32_t TIMEOUT = 100;
 
 // I2C addresses of each expander.
 const uint8_t IO_EXPANDER_I2C_ADDRESSES[] = {
-		0x74, 	// IO Expander 1 (Wells 1-8)
-		0x75	// IO Expander 2 (Wells 9-16)
+	0x74, 	// IO Expander 1 (Wells 1-8)
+	0x75	// IO Expander 2 (Wells 9-16)
 };
 
 typedef enum {
@@ -29,10 +29,10 @@ typedef enum {
 
 // internal addresses for port registers.
 const uint8_t PORT_ADDRESSES[] = {
-		0x06,   // CONFIG PORT 0
-		0x07,   // CONFIG PORT 1
-		0x02,   // OUTPUT PORT 0
-		0x03,   // OUTPUT PORT 1
+	0x06,   // CONFIG PORT 0
+	0x07,   // CONFIG PORT 1
+	0x02,   // OUTPUT PORT 0
+	0x03,   // OUTPUT PORT 1
 };
 
 static void get_port(IOExpanderID device, PortID port);
