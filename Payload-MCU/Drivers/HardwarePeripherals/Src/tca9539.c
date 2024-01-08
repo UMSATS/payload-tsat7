@@ -96,6 +96,11 @@ void TCA9539_Clear_Pins()
 	set_port(IO_EXPANDER_2, OUTPUT_PORT_1, 0x00);
 }
 
+/**
+ * @brief Gets the state of the register for the desired port.
+ *
+ * @return 8-bit register of the port.
+ */
 static uint8_t get_port(IOExpanderID device, PortID port)
 {
 	uint8_t port_register;
@@ -112,6 +117,9 @@ static uint8_t get_port(IOExpanderID device, PortID port)
 	return port_register;
 }
 
+/**
+ * @brief Sets the state of the register for the desired port.
+ */
 static void set_port(IOExpanderID device, PortID port, uint8_t bitmap)
 {
 	uint8_t i2c_address = IO_EXPANDER_I2C_ADDRESSES[device];
@@ -120,6 +128,11 @@ static void set_port(IOExpanderID device, PortID port, uint8_t bitmap)
 	HAL_I2C_Master_Transmit(&hi2c1, i2c_address, msg, sizeof(msg), TIMEOUT);
 }
 
+/**
+ * @brief Ensures the device, port, and pin numbers are valid.
+ *
+ * @return true if valid. false otherwise.
+ */
 static bool check_params(IOExpanderID device, int port, int pin)
 {
 	ASSERT(device == IO_EXPANDER_1 || device == IO_EXPANDER_2, "invalid device: %d", device);
