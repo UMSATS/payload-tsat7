@@ -35,13 +35,13 @@ typedef enum {
  *        ADC unit.
  * @return Raw reading from a MCP3221 ADC unit.
  */
-uint16_t wells_get_temperature(WellID well_id);
+uint16_t Wells_Get_Temperature(WellID well_id);
 
 /**
  * @brief Reads the current temperature of a well via its corresponding on-board
  *        ADC unit.
  * @return Raw reading from a MCP3221 ADC unit.
  */
-uint16_t wells_get_light_level(WellID well_id);
+uint16_t Wells_Get_Light_Level(WellID well_id);
 
 #endif /* WELLS_H_ */

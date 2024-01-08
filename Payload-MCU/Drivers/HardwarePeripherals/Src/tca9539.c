@@ -51,7 +51,8 @@ void TCA9539_Init()
 	TCA9539_Clear_Pins();
 }
 
-bool TCA9539_Set_Pin(IOExpanderID device, int port, int pin, bool set) {
+bool TCA9539_Set_Pin(IOExpanderID device, int port, int pin, bool set)
+{
 	if (!check_params(device, port, pin))
 		return false;
 
@@ -71,7 +72,8 @@ bool TCA9539_Set_Pin(IOExpanderID device, int port, int pin, bool set) {
 	return true;
 }
 
-bool TCA9539_Get_Pin(IOExpanderID device, int port, int pin) {
+bool TCA9539_Get_Pin(IOExpanderID device, int port, int pin)
+{
 	if (!check_params(device, port, pin))
 		return -1;
 

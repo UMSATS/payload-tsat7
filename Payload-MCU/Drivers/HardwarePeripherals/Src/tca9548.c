@@ -22,7 +22,7 @@ static const uint32_t TIMEOUT = 100;       // in ms
  *
  * @return -1 on error. 0 on success.
  */
-int tca9548_set_i2c_channel(TCA9548Channel channel)
+int TCA9548_Set_I2C_Channel(TCA9548Channel channel)
 {
 	ASSERT(TCA9548_CHANNEL_0 <= channel && channel <= TCA9548_CHANNEL_5,
 			"%d is not a valid channel number.", channel);

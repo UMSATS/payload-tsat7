@@ -24,6 +24,6 @@ typedef enum {
  *
  * @return -1 on error. 0 on success.
  */
-int tca9548_set_i2c_channel(TCA9548Channel channel);
+int TCA9548_Set_I2C_Channel(TCA9548Channel channel);
 
 #endif /* TCA9548_H_ */

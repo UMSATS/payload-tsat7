@@ -74,7 +74,7 @@ const Location SENSOR_LOCATIONS[] = {
 		{ TCA9548_CHANNEL_2, I2C_A1 }, // SENSOR 15
 };
 
-uint16_t wells_get_temperature(WellID well_id)
+uint16_t Wells_Get_Temperature(WellID well_id)
 {
 	ASSERT(WELL_1 <= well_id && well_id <= WELL_16, "%d is not a valid well ID.", well_id);
 
@@ -87,7 +87,7 @@ uint16_t wells_get_temperature(WellID well_id)
 	return temp;
 }
 
-uint16_t wells_get_light_level(WellID well_id)
+uint16_t Wells_Get_Light_Level(WellID well_id)
 {
 	ASSERT(WELL_1 <= well_id && well_id <= WELL_16, "%d is not a valid well ID.", well_id);
 
