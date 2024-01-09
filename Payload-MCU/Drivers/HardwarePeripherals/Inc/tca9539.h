@@ -7,8 +7,8 @@
  *  Purpose: this is the driver file for the TCA9539 IO expander IC.
  */
 
-#ifndef TCA9539_H_
-#define TCA9539_H_
+#ifndef HARDWAREPERIPHERALS_INC_TCA9539_H_
+#define HARDWAREPERIPHERALS_INC_TCA9539_H_
 
 #include "power.h"
 
@@ -68,4 +68,4 @@ bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, Power power);
  */
 bool TCA9539_Clear_Pins();
 
-#endif
+#endif /* HARDWAREPERIPHERALS_INC_TCA9539_H_ */

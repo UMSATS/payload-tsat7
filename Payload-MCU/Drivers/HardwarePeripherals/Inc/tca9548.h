@@ -7,8 +7,8 @@
  *  Purpose: This is the driver file for the I2C multiplexer, part # TCA9548.
  */
 
-#ifndef TCA9548_H_
-#define TCA9548_H_
+#ifndef HARDWAREPERIPHERALS_INC_TCA9548_H_
+#define HARDWAREPERIPHERALS_INC_TCA9548_H_
 
 #include <stdbool.h>
 
@@ -28,4 +28,4 @@ typedef enum {
  */
 bool TCA9548_Set_I2C_Channel(MuxChannel channel);
 
-#endif /* TCA9548_H_ */
+#endif /* HARDWAREPERIPHERALS_INC_TCA9548_H_ */

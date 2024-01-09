@@ -11,6 +11,7 @@
 #include "max6822.h"
 #include "tca9539.h"
 #include "tca9548.h"
+#include "tmp235.h"
 #include "heaters.h"
 #include "leds.h"
 #include "photocells.h"
@@ -20,12 +21,21 @@
 // include __disable_irq.
 #include "stm32l4xx_hal_def.h"
 
+// TODO:
+// [ ] Set command ID's to their correct values.
+// [ ] Board temp, well temp, and well light commands.
+// [ ] Handle command failures with appropriate error messages.
+// [ ] Fix LOG_ERROR, LOG_WARN, LOG_INFO, & ASSERT so they print to console.
+
 // CAN commands.
 #define CMD_RESET        0xA0
 #define CMD_LED_ON       0xA1
 #define CMD_LED_OFF      0xA2
 #define CMD_HEATER_ON    0xA5
 #define CMD_HEATER_OFF   0xA6
+#define CMD_BOARD_TEMP   0x00
+#define CMD_WELL_TEMP    0x00
+#define CMD_WELL_LIGHT   0x00
 
 CANQueue_t can_queue;
 
@@ -128,6 +138,25 @@ static void on_message_received(CANMessage_t msg)
 
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
+		}
+		case CMD_BOARD_TEMP:
+		{
+		/*
+			uint16_t temp;
+			TMP235_Read_Temp(&temp);
+
+			CAN_Send_Default_ACK(msg);
+			break;
+		*/
+			// TODO
+		}
+		case CMD_WELL_TEMP:
+		{
+			// TODO
+		}
+		case CMD_WELL_LIGHT:
+		{
+			// TODO
 		}
 		default:
 			LOG_ERROR("unknown command: 0x%02X.", msg.command);

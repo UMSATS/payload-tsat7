@@ -1,11 +1,11 @@
 /*
- * pcb_sensor.c
+ * tmp235.c
  *
  *  Created on: Dec 6, 2023
  *      Author: Logan Furedi, Jacob Petersen
  */
 
-#include "pcb_sensor.h"
+#include "tmp235.h"
 #include "assert.h"
 #include "log.h"
 
@@ -18,7 +18,7 @@ static const uint32_t TIMEOUT = 100; // in ms
 
 #define LOG_SUBJECT "PCB Sensor"
 
-bool PCB_Sensor_Read_Temp(uint16_t *out)
+bool TMP235_Read_Temp(uint16_t *out)
 {
 	// perform self-calibration.
 	HAL_StatusTypeDef status;
