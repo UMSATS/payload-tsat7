@@ -11,7 +11,6 @@
 #include <stdio.h>
 
 extern const char *LOG_SUBJECT;
-#define LOG_SET_SUBJECT(name)
 
 #define LOG_ERROR(...) \
 	do { \
