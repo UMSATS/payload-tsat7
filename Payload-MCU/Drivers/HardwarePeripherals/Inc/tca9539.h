@@ -10,6 +10,8 @@
 #ifndef TCA9539_H_
 #define TCA9539_H_
 
+#include "power.h"
+
 #include <stdbool.h>
 
 typedef enum
@@ -57,7 +59,7 @@ int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin);
  *
  * @return true on success. false on error.
  */
-bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set);
+bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, Power power);
 
 /**
  * @brief Sets all pins to low.

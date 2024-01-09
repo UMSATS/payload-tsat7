@@ -7,6 +7,7 @@
 
 #include "heaters.h"
 #include "well_id.h"
+#include "power.h"
 #include "tca9539.h"
 #include "expander_pin_location.h"
 #include "log.h"
@@ -34,7 +35,7 @@ static const ExpanderPinLocation HEATER_LOCATIONS[] = {
 
 #define LOG_SUBJECT "Heaters"
 
-bool Heaters_Set_Heater(WellID well_id, bool power)
+bool Heaters_Set_Heater(WellID well_id, Power power)
 {
 	ExpanderPinLocation location = HEATER_LOCATIONS[well_id];
 	bool success = TCA9539_Set_Pin(location.device, location.pin, power);

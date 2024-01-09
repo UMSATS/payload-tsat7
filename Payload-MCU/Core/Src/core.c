@@ -5,6 +5,8 @@
  *      Author: Logan Furedi
  */
 
+#include "core.h"
+#include "can_driver.h"
 #include "can_message_queue.h"
 #include "max6822.h"
 #include "tca9539.h"
@@ -15,18 +17,19 @@
 #include "thermistors.h"
 #include "log.h"
 
-#include "cmsis_iccarm.h"
+// include __disable_irq.
+#include "stm32l4xx_hal_def.h"
 
 // CAN commands.
-static const uint8_t CMD_RESET    = 0xA0;
-static const uint8_t CMD_LED_ON   = 0xA1;
-static const uint8_t CMD_LED_OFF  = 0xA2;
-static const uint8_t CMD_HEAT_ON  = 0xA5;
-static const uint8_t CMD_HEAT_OFF = 0xA6;
+#define CMD_RESET      0xA0
+#define CMD_LED_ON     0xA1
+#define CMD_LED_OFF    0xA2
+#define CMD_HEATER_ON  0xA5
+#define CMD_HEATER_OFF 0xA6
 
-static CANQueue_t can_queue;
+CANQueue_t can_queue;
 
-static void on_message_received(CANMessage_t *msg);
+static void on_message_received(CANMessage_t msg);
 
 #define LOG_SUBJECT "Core"
 
@@ -63,7 +66,7 @@ void Core_Update()
 		CANMessage_t can_message;
 		CAN_Queue_Dequeue(&can_queue, &can_message);
 
-		on_message_received(&can_message);
+		on_message_received(can_message);
 	}
 }
 
@@ -78,7 +81,7 @@ void Core_Halt()
 	while (1) {}
 }
 
-static void on_message_received(CANMessage_t *msg)
+static void on_message_received(CANMessage_t msg)
 {
 	uint8_t response_data[6] = {0};
 

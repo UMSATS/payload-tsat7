@@ -34,7 +34,7 @@ static const ExpanderPinLocation LED_LOCATIONS[] = {
 
 #define LOG_SUBJECT "LEDs"
 
-bool LEDs_Set_LED(WellID well_id, bool power)
+bool LEDs_Set_LED(WellID well_id, Power power)
 {
 	ExpanderPinLocation location = LED_LOCATIONS[well_id];
 	bool success = TCA9539_Set_Pin(location.device, location.pin, power);

@@ -8,6 +8,7 @@
  */
 
 #include "tca9539.h"
+#include "power.h"
 #include "assert.h"
 #include "log.h"
 
@@ -78,7 +79,7 @@ int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin)
 	return bit ? 1 : 0;
 }
 
-bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set)
+bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, Power power)
 {
 	if (!check_params(device, pin))
 		return false;
@@ -95,10 +96,10 @@ bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set)
 	uint8_t mask = 1 << (pin - port*8);
 
 	// modify the register.
-	if (set)
-		output_register &= ~mask; // set the bit to 0.
-	else
+	if (power == ON)
 		output_register |=  mask; // set the bit to 1.
+	else
+		output_register &= ~mask; // set the bit to 0.
 
 	// transmit modified output register to the device.
 	set_port(device, port_id, output_register);
