@@ -9,6 +9,7 @@
 #define HIGHLEVEL_INC_LEDS_H_
 
 #include "well_id.h"
+#include "power.h"
 
 #include <stdbool.h>
 
@@ -16,6 +17,6 @@
  * @brief Sets the power of an LED in a specific well on or off.
  * @return true on success. false on error.
  */
-bool LEDs_Set_LED(WellID well_id, bool power);
+bool LEDs_Set_LED(WellID well_id, Power power);
 
 #endif /* HIGHLEVEL_INC_LEDS_H_ */

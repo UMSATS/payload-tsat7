@@ -9,9 +9,10 @@
 #define HIGHLEVEL_INC_HEATERS_H_
 
 #include "well_id.h"
+#include "power.h"
 
 #include <stdbool.h>
 
-bool Heaters_Set_Heater(WellID well_id, bool power);
+bool Heaters_Set_Heater(WellID well_id, Power power);
 
 #endif /* HIGHLEVEL_INC_HEATERS_H_ */

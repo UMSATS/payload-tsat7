@@ -7,23 +7,15 @@
 
 #ifdef USE_FULL_ASSERTS
 
-#include "cmsis_iccarm.h"
+#include "core.h"
+#include "log.h"
 
-static void halt_program()
-{
-	fprintf(stderr, "[Core] Halting program.\r\n");
+#define LOG_SUBJECT "Assert"
 
-	// disable interrupts.
-	__disable_irq();
-
-	// hang indefinitely.
-	while (1) {}
-}
-
-// called after an assertion fails and an error message has been written.
+// called after an assertion fails and an error message has been logged.
 void assertion_failed()
 {
-	halt_program();
+	Core_Halt();
 }
 
 #endif

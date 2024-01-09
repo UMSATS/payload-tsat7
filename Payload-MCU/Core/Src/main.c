@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "assert.h"
+#include "core.h"
+#include "log.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
@@ -58,7 +59,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+#define LOG_SUBJECT "Core"
 /* USER CODE END 0 */
 
 /**
@@ -93,13 +94,14 @@ int main(void)
   MX_CAN1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-
+  Core_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	Core_Update();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -152,7 +154,8 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+#undef LOG_SUBJECT
+#define LOG_SUBJECT "HAL"
 /* USER CODE END 4 */
 
 /**
@@ -165,7 +168,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
 
-  fprintf(stderr, "HAL error occurred. Halting program.\r\n");
+  LOG_ERROR("error occurred. Halting program.\r\n");
 
   while (1)
   {}
@@ -185,7 +188,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  fprintf(stderr, "Invalid argument for HAL function. ('%s':%d)\r\n", file, line);
+  LOG_ERROR("invalid argument for HAL function. (in '%s':%d)\r\nlogged on line:", file, line);
 
   assertion_failed(); // see assert.c
   /* USER CODE END 6 */
