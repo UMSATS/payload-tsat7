@@ -11,19 +11,19 @@
 #define TCA9548_H_
 
 typedef enum {
-	TCA9548_CHANNEL_0 = 0,
-	TCA9548_CHANNEL_1,
-	TCA9548_CHANNEL_2,
-	TCA9548_CHANNEL_3,
-	TCA9548_CHANNEL_4,
-	TCA9548_CHANNEL_5,
-} TCA9548Channel;
+	MUX_CHANNEL_0 = 0,
+	MUX_CHANNEL_1,
+	MUX_CHANNEL_2,
+	MUX_CHANNEL_3,
+	MUX_CHANNEL_4,
+	MUX_CHANNEL_5,
+} MuxChannel;
 
 /**
  * @brief Sets the I2C channel for the multiplexer.
  *
- * @return -1 on error. 0 on success.
+ * @return true on success. false on error.
  */
-int TCA9548_Set_I2C_Channel(TCA9548Channel channel);
+bool TCA9548_Set_I2C_Channel(MuxChannel channel);
 
 #endif /* TCA9548_H_ */

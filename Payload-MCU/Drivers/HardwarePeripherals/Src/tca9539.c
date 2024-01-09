@@ -2,22 +2,23 @@
  * tca9539.c
  *
  *  Created on: Dec 18, 2023
- *      Author: Jacob Petersen
+ *      Author: Jacob Petersen, Logan Furedi
  *
  *  Purpose: this is the driver file for the TCA9539 IO expander IC.
  */
 
 #include "tca9539.h"
 #include "assert.h"
+#include "log.h"
 
 #include "i2c.h"
 
-const uint32_t TIMEOUT = 100;
+static const uint32_t TIMEOUT = 100;
 
-// I2C addresses of each expander.
-const uint8_t IO_EXPANDER_I2C_ADDRESSES[] = {
-	0x74, 	// IO Expander 1 (Wells 1-8)
-	0x75	// IO Expander 2 (Wells 9-16)
+// I2C addresses of each IO expander.
+static const uint8_t EXPANDER_I2C_ADDRESSES[] = {
+		0x74, 	// IO Expander 1 (Wells 1-8)
+		0x75	// IO Expander 2 (Wells 9-16)
 };
 
 typedef enum {
@@ -28,104 +29,176 @@ typedef enum {
 } PortID;
 
 // internal addresses for port registers.
-const uint8_t PORT_ADDRESSES[] = {
-	0x06,   // CONFIG PORT 0
-	0x07,   // CONFIG PORT 1
-	0x02,   // OUTPUT PORT 0
-	0x03,   // OUTPUT PORT 1
+static const uint8_t PORT_ADDRESSES[] = {
+		0x06,   // CONFIG PORT 0
+		0x07,   // CONFIG PORT 1
+		0x02,   // OUTPUT PORT 0
+		0x03,   // OUTPUT PORT 1
 };
 
-static void get_port(IOExpanderID device, PortID port);
-static void set_port(IOExpanderID device, PortID port, uint8_t bitmap);
-static bool check_params(IOExpanderID device, int port, int pin);
+static bool get_port(ExpanderID device, PortID port, uint8_t *out);
+static bool set_port(ExpanderID device, PortID port, uint8_t bitmap);
+static bool check_params(ExpanderID device, ExpanderPinID pin);
 
-void TCA9539_Init()
+#define LOG_SUBJECT "TCA9539"
+
+bool TCA9539_Init()
 {
+	bool success;
+
 	// configure all pins to be outputs.
-	set_port(IO_EXPANDER_1, CONFIG_PORT_0, 0x00);
-	set_port(IO_EXPANDER_1, CONFIG_PORT_1, 0x00);
-	set_port(IO_EXPANDER_2, CONFIG_PORT_0, 0x00);
-	set_port(IO_EXPANDER_2, CONFIG_PORT_1, 0x00);
+
+	success = set_port(EXPANDER_1, CONFIG_PORT_0, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_1, CONFIG_PORT_1, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_2, CONFIG_PORT_0, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_2, CONFIG_PORT_1, 0x00);
+	if (!success) return false;
 
 	// clear outputs.
-	TCA9539_Clear_Pins();
-}
-
-bool TCA9539_Set_Pin(IOExpanderID device, int port, int pin, bool set)
-{
-	if (!check_params(device, port, pin))
-		return false;
-
-	// get the register for the corresponding port.
-	PortID output_port = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
-	uint8_t output_register = get_port(device, output_port);
-
-	// modify the register.
-	if (set)
-		output_register &= ~(1 << pin); // set position "pin" to 0.
-	else
-		output_register |=  (1 << pin); // set position "pin" to 1.
-
-	// transmit modified output register to the device.
-	set_port(device, output_port, output_register);
+	success = TCA9539_Clear_Pins();
+	if (!success) return false;
 
 	return true;
 }
 
-bool TCA9539_Get_Pin(IOExpanderID device, int port, int pin)
+int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin)
 {
-	if (!check_params(device, port, pin))
+	if (!check_params(device, pin))
 		return -1;
 
+	int port = pin / 8; // 0 or 1.
+
 	// get the register for the corresponding port.
-	PortID output_port = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
-	uint8_t output_register = get_port(device, output_port);
+	uint8_t output_register;
+	PortID port_id = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
+
+	bool success = get_port(device, port_id, &output_register);
+	if (!success) return -1;
+
+	// bitmask of the bit we want.
+	uint8_t mask = 1 << (pin - port*8);
 
 	// extract the bit corresponding to the given pin.
-	uint8_t mask = output_register & (1 << pin);
+	uint8_t bit = output_register & mask;
 
-	return mask ? true : false;
+	return bit ? 1 : 0;
 }
 
-void TCA9539_Clear_Pins()
+bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set)
 {
+	if (!check_params(device, pin))
+		return false;
+
+	int port = pin / 8; // 0 or 1.
+
+	// get the register for the corresponding port.
+	uint8_t output_register;
+	PortID port_id = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
+	bool success = get_port(device, port_id, &output_register);
+	if (!success) return -1;
+
+	// bitmask where the 1 is the bit we want to modify.
+	uint8_t mask = 1 << (pin - port*8);
+
+	// modify the register.
+	if (set)
+		output_register &= ~mask; // set the bit to 0.
+	else
+		output_register |=  mask; // set the bit to 1.
+
+	// transmit modified output register to the device.
+	set_port(device, port_id, output_register);
+
+	return true;
+}
+
+bool TCA9539_Clear_Pins()
+{
+	bool success;
+
 	// clear all outputs for both devices.
-	set_port(IO_EXPANDER_1, OUTPUT_PORT_0, 0x00);
-	set_port(IO_EXPANDER_1, OUTPUT_PORT_1, 0x00);
-	set_port(IO_EXPANDER_2, OUTPUT_PORT_0, 0x00);
-	set_port(IO_EXPANDER_2, OUTPUT_PORT_1, 0x00);
+
+	success = set_port(EXPANDER_1, OUTPUT_PORT_0, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_1, OUTPUT_PORT_1, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_2, OUTPUT_PORT_0, 0x00);
+	if (!success) return false;
+
+	success = set_port(EXPANDER_2, OUTPUT_PORT_1, 0x00);
+	if (!success) return false;
+
+	return true;
 }
 
 /**
  * @brief Gets the state of the register for the desired port.
  *
- * @return 8-bit register of the port.
+ * @param device	which device to retrieve a port from.
+ * @param port		which port register to retrieve.
+ * @param out		8-bit register.
+ * @return 			true on success. false on error.
  */
-static uint8_t get_port(IOExpanderID device, PortID port)
+static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 {
-	uint8_t port_register;
+	HAL_StatusTypeDef status;
 
-	uint8_t i2c_address = IO_EXPANDER_I2C_ADDRESSES[device];
+	uint8_t i2c_address = EXPANDER_I2C_ADDRESSES[device];
 	uint8_t msg = PORT_ADDRESSES[port];
 
 	// indicate to the device which port we want.
-	HAL_I2C_Master_Transmit(&hi2c1, i2c_address, &msg, sizeof(msg), TIMEOUT);
+	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address, &msg, sizeof(msg), TIMEOUT);
+	if (status != HAL_OK)
+	{
+		LOG_ERROR("failed to transmit port address %x to device %d. (I2C address: %x, HAL error code: %d)", msg, device, i2c_address, status);
+		return false;
+	}
 
 	// now receive the current state of the register.
-	HAL_I2C_Master_Receive(&hi2c1, i2c_address, &port_register, sizeof(port_register), TIMEOUT);
+	uint8_t port_register;
+	status = HAL_I2C_Master_Receive(&hi2c1, i2c_address, &port_register, sizeof(port_register), TIMEOUT);
+	if (status != HAL_OK)
+	{
+		LOG_ERROR("failed to get register for port %d from device %d. (I2C address: %x, HAL error code: %d)", port, device, i2c_address, status);
+		return false;
+	}
 
-	return port_register;
+	*out = port_register;
+
+	return true;
 }
 
 /**
  * @brief Sets the state of the register for the desired port.
+ *
+ * @param device	which device to target.
+ * @param port		which port register to modify.
+ * @param bitmap	the new 8-bit register.
+ * @return 			true on success. false on error.
  */
-static void set_port(IOExpanderID device, PortID port, uint8_t bitmap)
+static bool set_port(ExpanderID device, PortID port, uint8_t bitmap)
 {
-	uint8_t i2c_address = IO_EXPANDER_I2C_ADDRESSES[device];
+	HAL_StatusTypeDef status;
+
+	uint8_t i2c_address = EXPANDER_I2C_ADDRESSES[device];
 	uint8_t msg[] = { PORT_ADDRESSES[port], bitmap };
 
-	HAL_I2C_Master_Transmit(&hi2c1, i2c_address, msg, sizeof(msg), TIMEOUT);
+	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address, msg, sizeof(msg), TIMEOUT);
+	if (status != HAL_OK)
+	{
+		LOG_ERROR("failed to transmit message { port address: %x, bitmap: %x } to device %d. (I2C address: %x, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -133,27 +206,20 @@ static void set_port(IOExpanderID device, PortID port, uint8_t bitmap)
  *
  * @return true if valid. false otherwise.
  */
-static bool check_params(IOExpanderID device, int port, int pin)
+static bool check_params(ExpanderID device, ExpanderPinID pin)
 {
-	ASSERT(device == IO_EXPANDER_1 || device == IO_EXPANDER_2, "invalid device: %d", device);
-	ASSERT(port == PORT_1 || port == PORT_2, "invalid port: %d", port);
-	ASSERT(pin >= 0 && pin <= 7, "invalid pin: %d", pin);
+	ASSERT(device == EXPANDER_1 || device == EXPANDER_2, "invalid device id: %d.", device);
+	ASSERT(pin >= EXPANDER_PIN_0 && pin <= EXPANDER_PIN_17, "invalid pin id: %d.", pin);
 
-	if (device != IO_EXPANDER_1 && device != IO_EXPANDER_2)
+	if (device != EXPANDER_1 && device != EXPANDER_2)
 	{
-		LOG_ERRROR("invalid device: %d", device);
+		LOG_ERROR("invalid device: %d.", device);
 		return false;
 	}
 
-	if (port < 0 || port > 1)
+	if (pin >= EXPANDER_PIN_0 && pin <= EXPANDER_PIN_17)
 	{
-		LOG_ERRROR("invalid port: %d", port);
-		return false;
-	}
-
-	if (pin < 0 || pin > 7)
-	{
-		LOG_ERRROR("invalid pin: %d", pin);
+		LOG_ERROR("invalid pin: %d.", pin);
 		return false;
 	}
 

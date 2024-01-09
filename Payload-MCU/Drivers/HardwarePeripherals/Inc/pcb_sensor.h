@@ -9,13 +9,14 @@
 #define PCB_SENSOR_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /**
  * @brief Gets a temperature reading from the on-board ADC.
  *
- * @return 12 bit integer representation of the reading, or -1 if the operation
- *         failed.
+ * @param out	output parameter. Raw 12 bit integer ADC reading.
+ * @return		true on success. false on error.
  */
-int16_t PCB_Sensor_Read_Temp();
+bool PCB_Sensor_Read_Temp(uint16_t *out);
 
 #endif /* PCB_SENSOR_H_ */
