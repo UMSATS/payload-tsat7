@@ -44,25 +44,14 @@ static bool check_params(ExpanderID device, ExpanderPinID pin);
 
 bool TCA9539_Init()
 {
-	bool success;
-
 	// configure all pins to be outputs.
-
-	success = set_port(EXPANDER_1, CONFIG_PORT_0, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_1, CONFIG_PORT_1, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_2, CONFIG_PORT_0, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_2, CONFIG_PORT_1, 0x00);
-	if (!success) return false;
+	if (!set_port(EXPANDER_1, CONFIG_PORT_0, 0x00)) return false;
+	if (!set_port(EXPANDER_1, CONFIG_PORT_1, 0x00)) return false;
+	if (!set_port(EXPANDER_2, CONFIG_PORT_0, 0x00)) return false;
+	if (!set_port(EXPANDER_2, CONFIG_PORT_1, 0x00)) return false;
 
 	// clear outputs.
-	success = TCA9539_Clear_Pins();
-	if (!success) return false;
+	if (!TCA9539_Clear_Pins()) return false;
 
 	return true;
 }
@@ -77,9 +66,8 @@ int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin)
 	// get the register for the corresponding port.
 	uint8_t output_register;
 	PortID port_id = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
-
-	bool success = get_port(device, port_id, &output_register);
-	if (!success) return -1;
+	if (!get_port(device, port_id, &output_register))
+		return -1;
 
 	// bitmask of the bit we want.
 	uint8_t mask = 1 << (pin - port*8);
@@ -100,8 +88,8 @@ bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set)
 	// get the register for the corresponding port.
 	uint8_t output_register;
 	PortID port_id = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
-	bool success = get_port(device, port_id, &output_register);
-	if (!success) return -1;
+	if (!get_port(device, port_id, &output_register))
+		return -1;
 
 	// bitmask where the 1 is the bit we want to modify.
 	uint8_t mask = 1 << (pin - port*8);
@@ -120,21 +108,11 @@ bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, bool set)
 
 bool TCA9539_Clear_Pins()
 {
-	bool success;
-
 	// clear all outputs for both devices.
-
-	success = set_port(EXPANDER_1, OUTPUT_PORT_0, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_1, OUTPUT_PORT_1, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_2, OUTPUT_PORT_0, 0x00);
-	if (!success) return false;
-
-	success = set_port(EXPANDER_2, OUTPUT_PORT_1, 0x00);
-	if (!success) return false;
+	if (!set_port(EXPANDER_1, OUTPUT_PORT_0, 0x00)) return false;
+	if (!set_port(EXPANDER_1, OUTPUT_PORT_1, 0x00)) return false;
+	if (!set_port(EXPANDER_2, OUTPUT_PORT_0, 0x00)) return false;
+	if (!set_port(EXPANDER_2, OUTPUT_PORT_1, 0x00)) return false;
 
 	return true;
 }
