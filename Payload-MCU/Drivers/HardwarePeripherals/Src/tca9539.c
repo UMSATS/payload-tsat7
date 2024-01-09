@@ -137,7 +137,7 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address, &msg, sizeof(msg), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to transmit port address %x to device %d. (I2C address: %x, HAL error code: %d)", msg, device, i2c_address, status);
+		LOG_ERROR("failed to transmit port address 0x%02X to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg, device, i2c_address, status);
 		return false;
 	}
 
@@ -146,7 +146,7 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	status = HAL_I2C_Master_Receive(&hi2c1, i2c_address, &port_register, sizeof(port_register), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to get register for port %d from device %d. (I2C address: %x, HAL error code: %d)", port, device, i2c_address, status);
+		LOG_ERROR("failed to get register for port %d from device %d. (I2C address: 0x%02X, HAL error code: %d)", port, device, i2c_address, status);
 		return false;
 	}
 
@@ -173,7 +173,7 @@ static bool set_port(ExpanderID device, PortID port, uint8_t bitmap)
 	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address, msg, sizeof(msg), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to transmit message { port address: %x, bitmap: %x } to device %d. (I2C address: %x, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
+		LOG_ERROR("failed to transmit message { port address: 0x%02X, bitmap: 0x%02X } to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
 		return false;
 	}
 

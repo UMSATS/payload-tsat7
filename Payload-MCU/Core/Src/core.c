@@ -21,11 +21,11 @@
 #include "stm32l4xx_hal_def.h"
 
 // CAN commands.
-#define CMD_RESET      0xA0
-#define CMD_LED_ON     0xA1
-#define CMD_LED_OFF    0xA2
-#define CMD_HEATER_ON  0xA5
-#define CMD_HEATER_OFF 0xA6
+#define CMD_RESET        0xA0
+#define CMD_LED_ON       0xA1
+#define CMD_LED_OFF      0xA2
+#define CMD_HEATER_ON    0xA5
+#define CMD_HEATER_OFF   0xA6
 
 CANQueue_t can_queue;
 
@@ -130,6 +130,7 @@ static void on_message_received(CANMessage_t msg)
 			break;
 		}
 		default:
+			LOG_ERROR("unknown command: 0x%02X.", msg.command);
 			break;
 	}
 }
