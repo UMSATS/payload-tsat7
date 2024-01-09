@@ -10,6 +10,8 @@
 #ifndef TCA9548_H_
 #define TCA9548_H_
 
+#include <stdbool.h>
+
 typedef enum {
 	MUX_CHANNEL_0 = 0,
 	MUX_CHANNEL_1,
