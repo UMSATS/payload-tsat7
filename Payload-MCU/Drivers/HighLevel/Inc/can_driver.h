@@ -11,8 +11,9 @@
  * CREATED ON: May 25, 2022
  */
 
-#ifndef HARDWAREPERIPHERALS_INC_CAN_DRIVER_H_
-#define HARDWAREPERIPHERALS_INC_CAN_DRIVER_H_
+#ifndef HIGHLEVEL_INC_CAN_DRIVER_H_
+#define HIGHLEVEL_INC_CAN_DRIVER_H_
+
 //###############################################################################################
 // Include Directives
 //###############################################################################################
@@ -59,4 +60,4 @@ HAL_StatusTypeDef CAN_Send_Default_ACK_With_Data(
         uint8_t *p_data // The 6 bytes of data that should be sent
 );
 
-#endif /* HARDWAREPERIPHERALS_INC_CAN_DRIVER_H_ */
+#endif /* HIGHLEVEL_INC_CAN_DRIVER_H_ */
