@@ -8,17 +8,12 @@
 #include "leds.h"
 #include "well_id.h"
 #include "tca9539.h"
+#include "expander_pin_location.h"
 #include "log.h"
 
 #include <stdbool.h>
 
-typedef struct
-{
-	ExpanderID device;
-	ExpanderPinID pin;
-} PinLocation;
-
-static const PinLocation LED_LOCATIONS[] = {
+static const ExpanderPinLocation LED_LOCATIONS[] = {
 		{ EXPANDER_1, EXPANDER_PIN_2  }, // LED 0
 		{ EXPANDER_1, EXPANDER_PIN_0  }, // LED 1
 		{ EXPANDER_1, EXPANDER_PIN_16 }, // LED 2
@@ -41,7 +36,7 @@ static const PinLocation LED_LOCATIONS[] = {
 
 bool LEDs_Set_LED(WellID well_id, bool power)
 {
-	PinLocation location = LED_LOCATIONS[well_id];
+	ExpanderPinLocation location = LED_LOCATIONS[well_id];
 	bool success = TCA9539_Set_Pin(location.device, location.pin, power);
 
 	if (!success)
