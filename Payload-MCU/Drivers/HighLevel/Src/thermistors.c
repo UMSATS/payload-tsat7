@@ -42,9 +42,9 @@ static const MuxADCLocation ADC_LOCATIONS[] = {
 
 bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 {
-	ASSERT(WELL_1 <= well_id && well_id <= WELL_16, "invalid well id: %d.", well_id);
+	ASSERT(WELL_0 <= well_id && well_id <= WELL_15, "invalid well id: %d.", well_id);
 
-	if (well_id < WELL_1 || well_id > WELL_16)
+	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
 		return false;

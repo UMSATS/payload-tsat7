@@ -36,6 +36,14 @@ static const ExpanderPinLocation LED_LOCATIONS[] = {
 
 bool LEDs_Set_LED(WellID well_id, Power power)
 {
+	ASSERT(WELL_0 <= well_id && well_id <= WELL_15, "invalid well id: %d.", well_id);
+
+	if (well_id < WELL_0 || well_id > WELL_15)
+	{
+		LOG_ERROR("invalid well id: %d.", well_id);
+		return false;
+	}
+
 	ExpanderPinLocation location = LED_LOCATIONS[well_id];
 	bool success = TCA9539_Set_Pin(location.device, location.pin, power);
 
