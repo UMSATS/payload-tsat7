@@ -2,7 +2,7 @@
  * tca9548.h
  *
  *  Created on: Nov 26, 2023
- *      Author: Jacob Petersen
+ *      Author: Jacob Petersen, Logan Furedi
  *
  *  Purpose: This is the driver file for the I2C multiplexer, part # TCA9548.
  */

@@ -60,6 +60,14 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 #define LOG_SUBJECT "Core"
+
+/* Function used by printf() to direct output to SWO, prototype in syscalls.c */
+int __io_putchar(int ch)
+{
+ ITM_SendChar(ch);
+ return(ch);
+}
+
 /* USER CODE END 0 */
 
 /**
