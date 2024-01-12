@@ -26,6 +26,7 @@
 // [ ] Board temp, well temp, and well light commands.
 // [ ] Handle command failures with appropriate error messages.
 // [ ] Fix LOG_ERROR, LOG_WARN, LOG_INFO, & ASSERT so they print to console.
+// [ ] Refactor CAN driver.
 
 // CAN commands.
 #define CMD_RESET        0xA0
@@ -39,7 +40,12 @@
 
 CANQueue_t can_queue;
 
+static uint8_t temp_sequence = 0;
+static uint8_t light_sequence = 0;
+
 static void on_message_received(CANMessage_t msg);
+static void transmit_well_temp_data(WellID well_id);
+static void transmit_light_level_data(WellID well_id);
 
 #define LOG_SUBJECT "Core"
 
@@ -162,4 +168,64 @@ static void on_message_received(CANMessage_t msg)
 			LOG_ERROR("unknown command: 0x%02X.", msg.command);
 			break;
 	}
+}
+
+// function to get temperature data, package it and send it through CAN
+static void transmit_well_temp_data(WellID well_id)
+{
+	uint16_t temp;
+	bool success = Thermistors_Get_Temp(well_id, &temp);
+
+	if (!success)
+	{
+		LOG_ERRROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		return;
+	}
+
+	CANMessage_t message;
+
+	message.SenderID = 0x3;
+	message.DestinationID = 0x1;
+	message.command = 0x34;
+	message.priority = 0b0000011;
+
+	message.data[0] = temp_sequence++;
+	message.data[1] = (uint8_t)well_id;
+	message.data[2] = temp & 0x00FF;
+	message.data[3] = temp & 0xFF00;
+	message.data[4] = 0x00;
+    message.data[5] = 0x00;
+    message.data[6] = 0x00;
+
+	CAN_Transmit_Message(message);
+}
+
+// function to get light level data, package it and send it through CAN
+static void transmit_light_level_data(WellID well_id)
+{
+	uint16_t light;
+	bool success = Photocells_Get_Light_Level(well_id, &light);
+
+	if (!success)
+	{
+		LOG_ERRROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		return;
+	}
+
+	CANMessage_t message;
+
+	message.SenderID = 0x3;
+	message.DestinationID = 0x1;
+	message.command = 0x33;
+	message.priority = 0b0011111;
+
+	message.data[0] = light_sequence++;
+	message.data[1] = (uint8_t)well_id;
+	message.data[2] = light & 0x00FF;
+	message.data[3] = light & 0xFF00;
+	message.data[4] = 0x00;
+	message.data[5] = 0x00;
+	message.data[6] = 0x00;
+
+	CAN_Transmit_Message(message);
 }

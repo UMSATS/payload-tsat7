@@ -9,6 +9,7 @@
 #include "well_id.h"
 #include "mux_adc_location.h"
 #include "tca9548.h"
+#include "utils.h"
 #include "assert.h"
 #include "log.h"
 
@@ -57,10 +58,10 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 		return false;
 	}
 
-	uint16_t data;
+	uint8_t data[2];
 	HAL_StatusTypeDef status;
-	status = HAL_I2C_Master_Receive(&hi2c1, ADC_LOCATIONS[well_id].address,
-			(uint8_t *)&data, sizeof(data), TIMEOUT);
+	status = HAL_I2C_Master_Receive(&hi2c1,
+			ADC_LOCATIONS[well_id].address, data, sizeof(data), TIMEOUT);
 
 	if (status != HAL_OK)
 	{
@@ -68,7 +69,9 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 		return false;
 	}
 
-	*out = data;
+	uint16_t temp = utils_be_to_native_16(data); // convert from BE to LE.
+
+	*out = temp;
 
 	return true;
 }

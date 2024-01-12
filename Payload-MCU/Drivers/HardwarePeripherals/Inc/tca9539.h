@@ -2,7 +2,7 @@
  * tca9539.h
  *
  *  Created on: Dec 18, 2023
- *      Author: Jacob Petersen
+ *      Author: Jacob Petersen, Logan Furedi
  *
  *  Purpose: this is the driver file for the TCA9539 IO expander IC.
  */
