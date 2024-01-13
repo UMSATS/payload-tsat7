@@ -22,11 +22,13 @@
 #include "stm32l4xx_hal_def.h"
 
 // TODO:
-// [ ] Set command ID's to their correct values.
-// [ ] Board temp, well temp, and well light commands.
+// [v] Set command ID's to their correct values.
+// [v] Board temp, well temp, and well light commands.
 // [ ] Handle command failures with appropriate error messages.
-// [ ] Fix LOG_ERROR, LOG_WARN, LOG_INFO, & ASSERT so they print to console.
+// [v] Fix LOG_ERROR, LOG_WARN, LOG_INFO, & ASSERT so they print to console.
 // [ ] Refactor CAN driver.
+// [ ] Setup TIM2.
+// [ ] Create function to write to non-volatile memory.
 
 // CAN commands.
 #define CMD_RESET        0xA0
@@ -34,9 +36,9 @@
 #define CMD_LED_OFF      0xA2
 #define CMD_HEATER_ON    0xA5
 #define CMD_HEATER_OFF   0xA6
-#define CMD_BOARD_TEMP   0x00
-#define CMD_WELL_TEMP    0x00
-#define CMD_WELL_LIGHT   0x00
+#define CMD_BOARD_TEMP   0xA7
+#define CMD_WELL_LIGHT   0xA8
+#define CMD_WELL_TEMP    0xA9
 
 CANQueue_t can_queue;
 
@@ -106,15 +108,15 @@ static void on_message_received(CANMessage_t msg)
 		case CMD_RESET:
 		{
 			CAN_Send_Default_ACK(msg);
-			MAX6822_Manual_Reset();
+			MAX6822_Manual_Reset(); // QUESTION: Should we call Core_Halt after this to wait for the reset to happen?
 			break;
 		}
 		case CMD_LED_ON:
 		{
 			uint8_t led_id = msg.data[0];
 			LEDs_Set_LED(led_id, ON);
-			response_data[0] = led_id;
 
+			response_data[0] = led_id;
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
 		}
@@ -122,8 +124,8 @@ static void on_message_received(CANMessage_t msg)
 		{
 			uint8_t led_id = msg.data[0];
 			LEDs_Set_LED(led_id, OFF);
-			response_data[0] = led_id;
 
+			response_data[0] = led_id;
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
 		}
@@ -131,8 +133,8 @@ static void on_message_received(CANMessage_t msg)
 		{
 			uint8_t heater_id = msg.data[0];
 			Heaters_Set_Heater(heater_id, ON);
-			response_data[0] = heater_id;
 
+			response_data[0] = heater_id;
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
 		}
@@ -140,29 +142,40 @@ static void on_message_received(CANMessage_t msg)
 		{
 			uint8_t heater_id = msg.data[0];
 			Heaters_Set_Heater(heater_id, OFF);
-			response_data[0] = heater_id;
 
+			response_data[0] = heater_id;
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
 		}
 		case CMD_BOARD_TEMP:
 		{
-		/*
 			uint16_t temp;
 			TMP235_Read_Temp(&temp);
 
-			CAN_Send_Default_ACK(msg);
+			response_data[0] = temp & 0x00FF;
+			response_data[1] = temp & 0xFF00;
+			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
-		*/
-			// TODO
-		}
-		case CMD_WELL_TEMP:
-		{
-			// TODO
 		}
 		case CMD_WELL_LIGHT:
 		{
-			// TODO
+			uint8_t well_id = msg.data[0];
+			uint16_t light;
+			Photocells_Get_Light_Level(well_id, &temp);
+
+			response_data[0] = light & 0x00FF; // TODO: add to command list doc if this is what we are doing.
+			response_data[1] = light & 0xFF00;
+			CAN_Send_Default_ACK_With_Data(msg, response_data);
+		}
+		case CMD_WELL_TEMP:
+		{
+			uint8_t well_id = msg.data[0];
+			uint16_t temp;
+			Thermistors_Read_Temp(well_id, &temp);
+
+			response_data[0] = temp & 0x00FF; // TODO: add to command list doc if this is what we are doing.
+			response_data[1] = temp & 0xFF00;
+			CAN_Send_Default_ACK_With_Data(msg, response_data);
 		}
 		default:
 			LOG_ERROR("unknown command: 0x%02X.", msg.command);
