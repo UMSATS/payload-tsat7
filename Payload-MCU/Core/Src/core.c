@@ -183,6 +183,23 @@ static void on_message_received(CANMessage_t msg)
 	}
 }
 
+static void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  // this SHOULD happen once per second. System clock = 80MHz, timer interval is 80000000.
+  if(htim->Instance == TIM2) {
+    secondsCounter++;
+    if (secondsCounter >= 60) {
+        secondsCounter = 0;
+        for (int i = 1; i < 11; i++) {
+            TEMP_transmitTemperatureData(i);
+        }
+        for (int i = 1; i < 11; i++) {
+            LIGHT_transmitLightLevelData(i);
+        }
+    }
+  }
+}
+
 // function to get temperature data, package it and send it through CAN
 static void transmit_well_temp_data(WellID well_id)
 {
