@@ -8,15 +8,9 @@
 #ifndef INC_ASSERT_H_
 #define INC_ASSERT_H_
 
+#include "pp.h"
+
 #ifdef USE_FULL_ASSERT
-
-	// expands args before concatenation
-	#define CONCAT_(a, b) a ## b
-	#define CONCAT(a, b) CONCAT_(a, b)
-
-	// 1 when one argument passed. 0 otherwise.
-	#define IS_ONE_ARG_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,...)_10
-	#define IS_ONE_ARG(...)IS_ONE_ARG_(__VA_ARGS__,0,0,0,0,0,0,0,0,0,1,)
 
 	#define ASSERT1(cond) \
 		do { \

@@ -32,27 +32,22 @@ extern CANQueue_t can_queue;
 HAL_StatusTypeDef CAN_Init(){
     HAL_StatusTypeDef operation_status;
 
-	CAN_FilterTypeDef sFilterConfig;
-	sFilterConfig.FilterIdHigh = 0x0000;
-	sFilterConfig.FilterIdLow = 0x0000;
-	sFilterConfig.FilterMaskIdHigh = 0x0000;
-	sFilterConfig.FilterMaskIdLow = 0x0000;
-	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-	sFilterConfig.FilterBank = 0;
-	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	sFilterConfig.FilterActivation = ENABLE;
-	sFilterConfig.SlaveStartFilterBank = 14;
+	CAN_FilterTypeDef sFilterConfig = {
+			.FilterFIFOAssignment = CAN_FILTER_FIFO0,
+			.FilterMode           = CAN_FILTERMODE_IDMASK,
+			.FilterScale          = CAN_FILTERSCALE_32BIT,
+			.FilterActivation     = ENABLE,
+			.SlaveStartFilterBank = 14,
+	};
 
 	operation_status = HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
-	if (operation_status != HAL_OK) goto error;
+	if (operation_status != HAL_OK) return operation_status;
+
 	operation_status = HAL_CAN_Start(&hcan1); // Turn on the CAN Bus
-	if (operation_status != HAL_OK) goto error;
+	if (operation_status != HAL_OK) return operation_status;
 
 	operation_status = HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-
-error:
-    return operation_status;
+	return operation_status;
 }
 
 /**

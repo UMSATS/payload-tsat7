@@ -21,11 +21,6 @@ static const uint32_t TIMEOUT = 100;       // in ms
 
 #define LOG_SUBJECT "TCA9548"
 
-void I2C_Send(uint8_t address, uint8_t *buffer, size_t buffer_len)
-{
-	HAL_I2C_Master_Transmit(&hi2c1, address, buffer, buffer_len, 100);
-}
-
 bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 {
 	ASSERT(MUX_CHANNEL_0 <= channel && channel <= MUX_CHANNEL_5, "invalid mux channel: %d.", channel);

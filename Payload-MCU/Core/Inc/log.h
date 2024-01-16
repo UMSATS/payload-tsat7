@@ -8,6 +8,8 @@
 #ifndef INC_LOG_H_
 #define INC_LOG_H_
 
+#include "error_stack.h"
+
 #include <stdio.h>
 
 #ifndef DISABLE_LOGGING

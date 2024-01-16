@@ -11,6 +11,7 @@
 #include "power.h"
 #include "assert.h"
 #include "log.h"
+#include "error_stack.h"
 
 #include "i2c.h"
 
@@ -138,6 +139,7 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to transmit port address 0x%02X to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg, device, i2c_address, status);
+		PUSH_ERROR(ERROR_I2C_TRANSMIT, (uint8_t)port, (uint8_t)status);
 		return false;
 	}
 
@@ -147,6 +149,7 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to get register for port %d from device %d. (I2C address: 0x%02X, HAL error code: %d)", port, device, i2c_address, status);
+		PUSH_ERROR(ERROR_I2C_RECEIVE, (uint8_t)port, (uint8_t)status);
 		return false;
 	}
 

@@ -17,6 +17,7 @@
 #include "photocells.h"
 #include "thermistors.h"
 #include "log.h"
+#include "error_stack.h"
 
 // include __disable_irq.
 #include "stm32l4xx_hal_def.h"
@@ -30,10 +31,12 @@
 // [ ] Handle command failures with appropriate error messages.
 // [v] Fix LOG_ERROR, LOG_WARN, LOG_INFO, & ASSERT so they print to console.
 // [ ] Refactor CAN driver.
-// [ ] Setup TIM2.
+// [v] Setup TIM2.
 // [ ] Create function to write to non-volatile memory.
+// [ ] Finish idle/active states.
+// [ ] Report unprovoked errors to CDH.
 
-// CAN commands.
+// Payload commands.
 #define CMD_RESET         0xA0
 #define CMD_LED_ON        0xA1
 #define CMD_LED_OFF       0xA2
@@ -44,6 +47,14 @@
 #define CMD_WELL_TEMP     0xA9
 #define CMD_DATA_INTERVAL 0XAA
 
+// send to CDH when an error occurs.
+#define CMD_ERROR_REPORT  0x51
+
+typedef enum {
+	IDLE = 0,
+	ACTIVE
+} State; // TODO
+
 CANQueue_t can_queue;
 
 static uint8_t temp_sequence = 0;
@@ -52,6 +63,7 @@ static uint8_t light_sequence = 0;
 static void on_message_received(CANMessage_t msg);
 static void transmit_well_temp_data(WellID well_id);
 static void transmit_well_light_data(WellID well_id);
+static void report_errors();
 
 #define LOG_SUBJECT "Core"
 
@@ -62,10 +74,13 @@ void Core_Init()
 
 	LOG_INFO("Initialising Drivers...");
 
+	Error_Stack_Clear();
+
 	success = TCA9539_Init();
 	if (!success)
 	{
 		LOG_ERROR("failed to initialise.");
+		PUSH_ERROR(ERROR_TCA9539_INIT);
 		Core_Halt();
 	}
 
@@ -73,6 +88,7 @@ void Core_Init()
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to initialise.");
+		PUSH_ERROR(ERROR_CAN_INIT);
 		Core_Halt();
 	}
 
@@ -154,7 +170,11 @@ static void on_message_received(CANMessage_t msg)
 		case CMD_BOARD_TEMP:
 		{
 			uint16_t temp;
-			TMP235_Read_Temp(&temp);
+			bool success = TMP235_Read_Temp(&temp);
+			if (!success)
+			{
+				PUSH_ERROR(ERROR_TMP235_READ_TEMP);
+			}
 
 			response_data[0] = (uint8_t)(temp & 0x00FF);
 			response_data[1] = (uint8_t)(temp & 0xFF00);
@@ -273,4 +293,11 @@ static void transmit_well_light_data(WellID well_id)
 	message.data[6] = 0x00;
 
 	CAN_Transmit_Message(message);
+}
+
+static void report_errors()
+{
+	CANMessage_t msg;
+	// TODO
+	CAN_Transmit_Message(msg);
 }
