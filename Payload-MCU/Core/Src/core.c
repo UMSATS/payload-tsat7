@@ -21,6 +21,9 @@
 // include __disable_irq.
 #include "stm32l4xx_hal_def.h"
 
+// include htim2.
+#include "tim.h"
+
 // TODO:
 // [v] Set command ID's to their correct values.
 // [v] Board temp, well temp, and well light commands.
@@ -31,14 +34,15 @@
 // [ ] Create function to write to non-volatile memory.
 
 // CAN commands.
-#define CMD_RESET        0xA0
-#define CMD_LED_ON       0xA1
-#define CMD_LED_OFF      0xA2
-#define CMD_HEATER_ON    0xA5
-#define CMD_HEATER_OFF   0xA6
-#define CMD_BOARD_TEMP   0xA7
-#define CMD_WELL_LIGHT   0xA8
-#define CMD_WELL_TEMP    0xA9
+#define CMD_RESET         0xA0
+#define CMD_LED_ON        0xA1
+#define CMD_LED_OFF       0xA2
+#define CMD_HEATER_ON     0xA5
+#define CMD_HEATER_OFF    0xA6
+#define CMD_BOARD_TEMP    0xA7
+#define CMD_WELL_LIGHT    0xA8
+#define CMD_WELL_TEMP     0xA9
+#define CMD_DATA_INTERVAL 0XAA
 
 CANQueue_t can_queue;
 
@@ -47,7 +51,7 @@ static uint8_t light_sequence = 0;
 
 static void on_message_received(CANMessage_t msg);
 static void transmit_well_temp_data(WellID well_id);
-static void transmit_light_level_data(WellID well_id);
+static void transmit_well_light_data(WellID well_id);
 
 #define LOG_SUBJECT "Core"
 
@@ -152,8 +156,8 @@ static void on_message_received(CANMessage_t msg)
 			uint16_t temp;
 			TMP235_Read_Temp(&temp);
 
-			response_data[0] = temp & 0x00FF;
-			response_data[1] = temp & 0xFF00;
+			response_data[0] = (uint8_t)(temp & 0x00FF);
+			response_data[1] = (uint8_t)(temp & 0xFF00);
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 			break;
 		}
@@ -161,21 +165,33 @@ static void on_message_received(CANMessage_t msg)
 		{
 			uint8_t well_id = msg.data[0];
 			uint16_t light;
-			Photocells_Get_Light_Level(well_id, &temp);
+			Photocells_Get_Light_Level(well_id, &light);
 
-			response_data[0] = light & 0x00FF; // TODO: add to command list doc if this is what we are doing.
-			response_data[1] = light & 0xFF00;
+			response_data[0] = (uint8_t)(light & 0x00FF); // TODO: add to command list doc if this is what we are doing.
+			response_data[1] = (uint8_t)(light & 0xFF00);
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
 		}
 		case CMD_WELL_TEMP:
 		{
 			uint8_t well_id = msg.data[0];
 			uint16_t temp;
-			Thermistors_Read_Temp(well_id, &temp);
+			Thermistors_Get_Temp(well_id, &temp);
 
-			response_data[0] = temp & 0x00FF; // TODO: add to command list doc if this is what we are doing.
-			response_data[1] = temp & 0xFF00;
+			response_data[0] = (uint8_t)(temp & 0x00FF); // TODO: add to command list doc if this is what we are doing.
+			response_data[1] = (uint8_t)(temp & 0xFF00);
 			CAN_Send_Default_ACK_With_Data(msg, response_data);
+		}
+		case CMD_DATA_INTERVAL:
+		{
+			uint32_t period;
+
+			period  = 0x000000FF & msg.data[0];
+			period |= 0x0000FF00 & msg.data[1];
+			period |= 0x00FF0000 & msg.data[2];
+			period |= 0xFF000000 & msg.data[3];
+
+			// set interrupt timer period.
+			__HAL_TIM_SET_AUTORELOAD(&htim2, period);
 		}
 		default:
 			LOG_ERROR("unknown command: 0x%02X.", msg.command);
@@ -183,21 +199,20 @@ static void on_message_received(CANMessage_t msg)
 	}
 }
 
-static void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+// callback for TIM2.
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  // this SHOULD happen once per second. System clock = 80MHz, timer interval is 80000000.
-  if(htim->Instance == TIM2) {
-    secondsCounter++;
-    if (secondsCounter >= 60) {
-        secondsCounter = 0;
-        for (int i = 1; i < 11; i++) {
-            TEMP_transmitTemperatureData(i);
-        }
-        for (int i = 1; i < 11; i++) {
-            LIGHT_transmitLightLevelData(i);
-        }
-    }
-  }
+	if (htim->Instance == TIM2)
+	{
+		for (int i = WELL_0; i < WELL_15; i++)
+		{
+			transmit_well_temp_data(i);
+		}
+		for (int i = WELL_0; i < WELL_15; i++)
+		{
+			transmit_well_light_data(i);
+		}
+	}
 }
 
 // function to get temperature data, package it and send it through CAN
@@ -208,7 +223,7 @@ static void transmit_well_temp_data(WellID well_id)
 
 	if (!success)
 	{
-		LOG_ERRROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		LOG_ERROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
 		return;
 	}
 
@@ -221,8 +236,8 @@ static void transmit_well_temp_data(WellID well_id)
 
 	message.data[0] = temp_sequence++;
 	message.data[1] = (uint8_t)well_id;
-	message.data[2] = temp & 0x00FF;
-	message.data[3] = temp & 0xFF00;
+	message.data[2] = (uint8_t)(temp & 0x00FF);
+	message.data[3] = (uint8_t)((temp & 0xFF00) >> 8);
 	message.data[4] = 0x00;
     message.data[5] = 0x00;
     message.data[6] = 0x00;
@@ -231,14 +246,14 @@ static void transmit_well_temp_data(WellID well_id)
 }
 
 // function to get light level data, package it and send it through CAN
-static void transmit_light_level_data(WellID well_id)
+static void transmit_well_light_data(WellID well_id)
 {
 	uint16_t light;
 	bool success = Photocells_Get_Light_Level(well_id, &light);
 
 	if (!success)
 	{
-		LOG_ERRROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		LOG_ERROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
 		return;
 	}
 
@@ -251,8 +266,8 @@ static void transmit_light_level_data(WellID well_id)
 
 	message.data[0] = light_sequence++;
 	message.data[1] = (uint8_t)well_id;
-	message.data[2] = light & 0x00FF;
-	message.data[3] = light & 0xFF00;
+	message.data[2] = (uint8_t)(light & 0x00FF);
+	message.data[3] = (uint8_t)((light & 0xFF00) >> 8);
 	message.data[4] = 0x00;
 	message.data[5] = 0x00;
 	message.data[6] = 0x00;
