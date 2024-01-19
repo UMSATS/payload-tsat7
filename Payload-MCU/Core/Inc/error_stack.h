@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define ERROR_STACK_CAPACITY 6
 
@@ -18,6 +19,7 @@ typedef struct ErrorStack ErrorStack;
 void Error_Stack_Clear();
 void Error_Stack_Push_Error_Code(uint8_t error_code);
 void Error_Stack_Push_Data(uint8_t *data, size_t size);
+bool Error_Stack_Has_Errors();
 const uint8_t *Error_Stack_Get_Errors();
 
 typedef enum {
@@ -38,6 +40,7 @@ typedef enum {
 	ERROR_TCA9548_INIT,
 	ERROR_TCA9548_SET_CHANNEL,
 	ERROR_TMP235_READ_TEMP,
+	ERROR_UNKNOWN_COMMAND
 } PAYLOAD_ERRORS;
 
 #define PUSH_ERROR1(error_code) Error_Stack_Push_Error_Code(error_code)

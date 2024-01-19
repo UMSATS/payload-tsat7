@@ -14,50 +14,28 @@
 #ifndef HIGHLEVEL_INC_CAN_DRIVER_H_
 #define HIGHLEVEL_INC_CAN_DRIVER_H_
 
-//###############################################################################################
-// Include Directives
-//###############################################################################################
+#include "can_message.h"
 #include "stm32l4xx_hal.h"
 
-//###############################################################################################
-// Define Directives & Extern Variables
-//###############################################################################################
-#define MAX_CAN_DATA_LENGTH  8
-#define RECEIVED_SENDER_ID_MASK  0xC
-#define RECEIVED_DESTINATION_ID_MASK  0x3
-#define SOURCE_ID  0x3 // The ID number of the device MAX VALUE: 0x3
+#include <stdint.h>
+#include <stdbool.h>
 
 extern CAN_HandleTypeDef hcan1; // Set this to the CAN type found in generated main.c file
 
-//###############################################################################################
-// Structs
-//###############################################################################################
-typedef struct{
-	uint8_t priority; // Priority of the message, MAX VALUE: 0x7F
-	uint8_t SenderID; // The ID number of the sending device, MAX VALUE: 0x3
-	uint8_t DestinationID; // The ID number of the destination device, MAX VALUE: 0x3
-	uint8_t command; // The command value
-	uint8_t data[7]; // Message
-} CANMessage_t;
+typedef void (*CANMessageCallback)(CANMessage);
 
-//###############################################################################################
-// Public Function Prototypes
-//###############################################################################################
-HAL_StatusTypeDef CAN_Init(); // Initializes and Starts the CAN Bus
+/*
+ * @brief				starts the CAN bus.
+ * @param device_id		the CAN ID for this device. (max value: 0x03)
+ * @param callback		called when a new message is polled.
+ */
+HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback);
 
-HAL_StatusTypeDef CAN_Transmit_Message(
-        CANMessage_t myMessage // Uses the message struct to send messages
-);
+// polls for new messages. (callback is called from here)
+void CAN_Poll_Messages();
 
-HAL_StatusTypeDef CAN_Message_Received(); // Interrupt handler for the CAN Bus
+HAL_StatusTypeDef CAN_Send_Message(CANMessage message);
 
-HAL_StatusTypeDef CAN_Send_Default_ACK(
-        CANMessage_t myMessage // The message that the default ACK should be sent for
-);
-
-HAL_StatusTypeDef CAN_Send_Default_ACK_With_Data(
-        CANMessage_t myMessage, // The message that the default ACK should be sent for
-        uint8_t *p_data // The 6 bytes of data that should be sent
-);
+HAL_StatusTypeDef CAN_Send_Response(CANMessageBody message_body, bool success);
 
 #endif /* HIGHLEVEL_INC_CAN_DRIVER_H_ */

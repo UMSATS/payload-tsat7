@@ -25,6 +25,8 @@
 // include htim2.
 #include "tim.h"
 
+#include <string.h>
+
 // TODO:
 // [v] Set command ID's to their correct values.
 // [v] Board temp, well temp, and well light commands.
@@ -35,34 +37,41 @@
 // [ ] Create function to write to non-volatile memory.
 // [ ] Finish idle/active states.
 // [ ] Report unprovoked errors to CDH.
+// [ ] Implement temperature regulation controller.
+
+// Can ID's
+#define DEVICE_ID 0x03 // this device.
+#define CDH_ID    0x01 // CDH.
 
 // Payload commands.
-#define CMD_RESET         0xA0
-#define CMD_LED_ON        0xA1
-#define CMD_LED_OFF       0xA2
-#define CMD_HEATER_ON     0xA5
-#define CMD_HEATER_OFF    0xA6
-#define CMD_BOARD_TEMP    0xA7
-#define CMD_WELL_LIGHT    0xA8
-#define CMD_WELL_TEMP     0xA9
-#define CMD_DATA_INTERVAL 0XAA
+#define CMD_RESET          0xA0
+#define CMD_LED_ON         0xA1
+#define CMD_LED_OFF        0xA2
+#define CMD_HEATER_ON      0xA5
+#define CMD_HEATER_OFF     0xA6
+#define CMD_GET_BOARD_TEMP 0xA7
+#define CMD_GET_WELL_LIGHT 0xA8
+#define CMD_GET_WELL_TEMP  0xA9
+#define CMD_DATA_INTERVAL  0xAA
+#define CMD_LED_TEST       0xAB
+#define CMD_GET_BASELINE   0xAC
 
-// send to CDH when an error occurs.
-#define CMD_ERROR_REPORT  0x51
+// CDH commands
+#define CMD_REPORT_ERROR      0x51
+#define CMD_REPORT_WELL_LIGHT 0x33
+#define CMD_REPORT_WELL_TEMP  0x34
 
 typedef enum {
 	IDLE = 0,
 	ACTIVE
 } State; // TODO
 
-CANQueue_t can_queue;
-
 static uint8_t temp_sequence = 0;
 static uint8_t light_sequence = 0;
 
-static void on_message_received(CANMessage_t msg);
-static void transmit_well_temp_data(WellID well_id);
-static void transmit_well_light_data(WellID well_id);
+static void on_message_received(CANMessage msg);
+static void report_well_temp_data(WellID well_id);
+static void report_well_light_data(WellID well_id);
 static void report_errors();
 
 #define LOG_SUBJECT "Core"
@@ -84,28 +93,20 @@ void Core_Init()
 		Core_Halt();
 	}
 
-	status = CAN_Init();
+	status = CAN_Init(DEVICE_ID, on_message_received);
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to initialise.");
 		PUSH_ERROR(ERROR_CAN_INIT);
 		Core_Halt();
 	}
-
-	CAN_Queue_Init(&can_queue);
 }
 
 void Core_Update()
 {
 	MAX6822_Reset_Timer();
 
-	if (!CAN_Queue_IsEmpty(&can_queue))
-	{
-		CANMessage_t can_message;
-		CAN_Queue_Dequeue(&can_queue, &can_message);
-
-		on_message_received(can_message);
-	}
+	CAN_Poll_Messages();
 }
 
 void Core_Halt()
@@ -119,185 +120,188 @@ void Core_Halt()
 	while (1) {}
 }
 
-static void on_message_received(CANMessage_t msg)
+static void on_message_received(CANMessage msg)
 {
-	uint8_t response_data[6] = {0};
+	Error_Stack_Clear();
 
-	switch (msg.command)
+	CANMessageBody response_body = { .data = { msg.command_id } };
+
+	// the reset command is a special case.
+	if (msg.command_id == CMD_RESET)
 	{
-		case CMD_RESET:
-		{
-			CAN_Send_Default_ACK(msg);
-			MAX6822_Manual_Reset(); // QUESTION: Should we call Core_Halt after this to wait for the reset to happen?
-			break;
-		}
+		CAN_Send_Response(response_body, true);
+		MAX6822_Manual_Reset();
+		Core_Halt();
+		return;
+	}
+
+	bool success = true;
+
+	switch (msg.command_id)
+	{
 		case CMD_LED_ON:
 		{
-			uint8_t led_id = msg.data[0];
-			LEDs_Set_LED(led_id, ON);
-
-			response_data[0] = led_id;
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			success = LEDs_Set_LED(msg.data[1], ON);
+			response_body.data[1] = msg.data[1];
 			break;
 		}
 		case CMD_LED_OFF:
 		{
-			uint8_t led_id = msg.data[0];
-			LEDs_Set_LED(led_id, OFF);
-
-			response_data[0] = led_id;
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			success = LEDs_Set_LED(msg.data[1], OFF);
+			response_body.data[1] = msg.data[1];
 			break;
 		}
 		case CMD_HEATER_ON:
 		{
-			uint8_t heater_id = msg.data[0];
-			Heaters_Set_Heater(heater_id, ON);
-
-			response_data[0] = heater_id;
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			success = Heaters_Set_Heater(msg.data[1], ON);
+			response_body.data[1] = msg.data[1];
 			break;
 		}
 		case CMD_HEATER_OFF:
 		{
-			uint8_t heater_id = msg.data[0];
-			Heaters_Set_Heater(heater_id, OFF);
-
-			response_data[0] = heater_id;
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			success = Heaters_Set_Heater(msg.data[1], OFF);
+			response_body.data[1] = msg.data[1];
 			break;
 		}
-		case CMD_BOARD_TEMP:
+		case CMD_GET_BOARD_TEMP:
 		{
 			uint16_t temp;
-			bool success = TMP235_Read_Temp(&temp);
+			success = TMP235_Read_Temp(&temp);
 			if (!success)
 			{
 				PUSH_ERROR(ERROR_TMP235_READ_TEMP);
 			}
 
-			response_data[0] = (uint8_t)(temp & 0x00FF);
-			response_data[1] = (uint8_t)(temp & 0xFF00);
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			response_body.data[1] = (uint8_t)(temp & 0x00FF);
+			response_body.data[2] = (uint8_t)(temp & 0xFF00);
 			break;
 		}
-		case CMD_WELL_LIGHT:
+		case CMD_GET_WELL_LIGHT:
 		{
-			uint8_t well_id = msg.data[0];
 			uint16_t light;
-			Photocells_Get_Light_Level(well_id, &light);
+			success = Photocells_Get_Light_Level(msg.data[1], &light);
 
-			response_data[0] = (uint8_t)(light & 0x00FF); // TODO: add to command list doc if this is what we are doing.
-			response_data[1] = (uint8_t)(light & 0xFF00);
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			response_body.data[1] = msg.data[1];
+			response_body.data[2] = (uint8_t)(light & 0x00FF);
+			response_body.data[3] = (uint8_t)(light & 0xFF00);
+			break;
 		}
-		case CMD_WELL_TEMP:
+		case CMD_GET_WELL_TEMP:
 		{
-			uint8_t well_id = msg.data[0];
 			uint16_t temp;
-			Thermistors_Get_Temp(well_id, &temp);
+			success = Thermistors_Get_Temp(msg.data[1], &temp);
 
-			response_data[0] = (uint8_t)(temp & 0x00FF); // TODO: add to command list doc if this is what we are doing.
-			response_data[1] = (uint8_t)(temp & 0xFF00);
-			CAN_Send_Default_ACK_With_Data(msg, response_data);
+			response_body.data[1] = msg.data[1];
+			response_body.data[2] = (uint8_t)(temp & 0x00FF);
+			response_body.data[3] = (uint8_t)(temp & 0xFF00);
+			break;
 		}
 		case CMD_DATA_INTERVAL:
 		{
 			uint32_t period;
 
-			period  = 0x000000FF & msg.data[0];
-			period |= 0x0000FF00 & msg.data[1];
-			period |= 0x00FF0000 & msg.data[2];
-			period |= 0xFF000000 & msg.data[3];
+			period  = msg.data[1];
+			period |= msg.data[2] << 8;
+			period |= msg.data[3] << 16;
+			period |= msg.data[4] << 24;
 
 			// set interrupt timer period.
 			__HAL_TIM_SET_AUTORELOAD(&htim2, period);
+			break;
 		}
 		default:
-			LOG_ERROR("unknown command: 0x%02X.", msg.command);
+		{
+			success = false;
+			LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
+			PUSH_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
 			break;
+		}
 	}
+
+	CAN_Send_Response(response_body, success);
 }
 
-// callback for TIM2.
+// callback for timers.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM2)
 	{
 		for (int i = WELL_0; i < WELL_15; i++)
 		{
-			transmit_well_temp_data(i);
+			report_well_temp_data(i);
 		}
 		for (int i = WELL_0; i < WELL_15; i++)
 		{
-			transmit_well_light_data(i);
+			report_well_light_data(i);
 		}
 	}
 }
 
 // function to get temperature data, package it and send it through CAN
-static void transmit_well_temp_data(WellID well_id)
+static void report_well_temp_data(WellID well_id)
 {
 	uint16_t temp;
 	bool success = Thermistors_Get_Temp(well_id, &temp);
 
 	if (!success)
 	{
-		LOG_ERROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
 		return;
 	}
 
-	CANMessage_t message;
+	CANMessage msg = {
+			.destination_id = CDH_ID,
+			.priority = 3,
+			.command_id = CMD_REPORT_WELL_TEMP,
+			.body = {
+					.data = {
+						temp_sequence,
+						(uint8_t)well_id,
+						(uint8_t)(temp & 0x00FF),
+						(uint8_t)((temp & 0xFF00) >> 8)
+					}
+			},
+	};
 
-	message.SenderID = 0x3;
-	message.DestinationID = 0x1;
-	message.command = 0x34;
-	message.priority = 0b0000011;
+	temp_sequence++;
 
-	message.data[0] = temp_sequence++;
-	message.data[1] = (uint8_t)well_id;
-	message.data[2] = (uint8_t)(temp & 0x00FF);
-	message.data[3] = (uint8_t)((temp & 0xFF00) >> 8);
-	message.data[4] = 0x00;
-    message.data[5] = 0x00;
-    message.data[6] = 0x00;
-
-	CAN_Transmit_Message(message);
+	CAN_Send_Message(msg);
 }
 
 // function to get light level data, package it and send it through CAN
-static void transmit_well_light_data(WellID well_id)
+static void report_well_light_data(WellID well_id)
 {
 	uint16_t light;
 	bool success = Photocells_Get_Light_Level(well_id, &light);
 
 	if (!success)
 	{
-		LOG_ERROR("failed to transmit temperature of well %d: could not get temperature.", well_id);
+		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
 		return;
 	}
 
-	CANMessage_t message;
+	CANMessage msg = {
+			.destination_id = CDH_ID,
+			.priority = 31,
+			.command_id = CMD_REPORT_WELL_LIGHT,
+			.body = {
+					.data = {
+						light_sequence,
+						(uint8_t)well_id,
+						(uint8_t)(light & 0x00FF),
+						(uint8_t)((light & 0xFF00) >> 8)
+					}
+			},
+	};
 
-	message.SenderID = 0x3;
-	message.DestinationID = 0x1;
-	message.command = 0x33;
-	message.priority = 0b0011111;
+	temp_sequence++;
 
-	message.data[0] = light_sequence++;
-	message.data[1] = (uint8_t)well_id;
-	message.data[2] = (uint8_t)(light & 0x00FF);
-	message.data[3] = (uint8_t)((light & 0xFF00) >> 8);
-	message.data[4] = 0x00;
-	message.data[5] = 0x00;
-	message.data[6] = 0x00;
-
-	CAN_Transmit_Message(message);
+	CAN_Send_Message(msg);
 }
 
 static void report_errors()
 {
-	CANMessage_t msg;
+	CANMessage msg;
 	// TODO
-	CAN_Transmit_Message(msg);
+	CAN_Send_Message(msg);
 }

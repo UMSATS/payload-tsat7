@@ -48,6 +48,11 @@ void Error_Stack_Push_Data(uint8_t *data, size_t size)
 	error_stack.size += bytes_to_copy;
 }
 
+bool Error_Stack_Has_Errors()
+{
+	return error_stack.size > 0;
+}
+
 const uint8_t *Error_Stack_Get_Errors()
 {
 	return error_stack.errors;

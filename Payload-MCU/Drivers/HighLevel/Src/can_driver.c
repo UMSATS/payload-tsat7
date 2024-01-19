@@ -8,31 +8,53 @@
  *
  * AUTHORS:
  *  - Graham Driver (graham.driver@umsats.ca)
+ *  - Logan Furedi
  *
  * CREATED ON: May 25, 2022
  */
 
-//###############################################################################################
-// Include Directives
-//###############################################################################################
-#include <can_driver.h>
-#include <stdio.h>
+// Command:___________________________
+//|CMD|DA0|DA1|DA2|DA3|DA4|DA5|DA6|DA7|
+// ````````````````````````````````````
+// Acknowledgement:___________________
+//|ACK|CMD|DA0|DA1|DA2|DA3|DA4|DA5|DA6|
+// ````````````````````````````````````
+
+#include "can_driver.h"
 #include "can_message_queue.h"
+#include "assert.h"
 
-extern CANQueue_t can_queue;
+#include <stdio.h>
+#include <string.h>
 
-//###############################################################################################
-//Public Functions
-//###############################################################################################
+#define RECEIVED_SENDER_ID_MASK  0xC
+#define RECEIVED_DESTINATION_ID_MASK  0x3
+
+#define CMD_ACK   0x01
+#define CMD_NACK  0x02
+
+static CANQueue s_can_queue;
+static uint8_t s_device_id; // the ID for THIS device. max value: 0x3
+static CANMessageCallback s_message_callback;
+static CANMessage s_received_msg; // the current message being processed.
+
 /**
  * @brief Boots the CAN Bus
  *
  * @return HAL_StatusTypeDef
  */
-HAL_StatusTypeDef CAN_Init(){
+HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback)
+{
+	ASSERT(device_id <= 0x03);
+	ASSERT(callback != NULL);
+
     HAL_StatusTypeDef operation_status;
 
-	CAN_FilterTypeDef sFilterConfig = {
+    s_device_id = device_id;
+    s_message_callback = callback;
+    s_received_msg = (CANMessage){0};
+
+	const CAN_FilterTypeDef filter_config = {
 			.FilterFIFOAssignment = CAN_FILTER_FIFO0,
 			.FilterMode           = CAN_FILTERMODE_IDMASK,
 			.FilterScale          = CAN_FILTERSCALE_32BIT,
@@ -40,39 +62,53 @@ HAL_StatusTypeDef CAN_Init(){
 			.SlaveStartFilterBank = 14,
 	};
 
-	operation_status = HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
-	if (operation_status != HAL_OK) return operation_status;
+	operation_status = HAL_CAN_ConfigFilter(&hcan1, &filter_config);
+	if (operation_status != HAL_OK) goto error;
 
-	operation_status = HAL_CAN_Start(&hcan1); // Turn on the CAN Bus
-	if (operation_status != HAL_OK) return operation_status;
+	operation_status = HAL_CAN_Start(&hcan1);
+	if (operation_status != HAL_OK) goto error;
 
 	operation_status = HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+	if (operation_status != HAL_OK) goto error;
+
+	s_can_queue = CANQueue_Create();
+
+error:
 	return operation_status;
+}
+
+void CAN_Poll_Messages()
+{
+	if (CANQueue_Dequeue(&s_can_queue, &s_received_msg))
+	{
+		s_message_callback(s_received_msg);
+	}
 }
 
 /**
  * @brief Used to send messages over CAN
  *
- * @param myMessage: The CAN message
+ * @param message: The CAN message
  *
  * @return HAL_StatusTypeDef
  */
-HAL_StatusTypeDef CAN_Transmit_Message(CANMessage_t myMessage){
-	uint32_t txMailbox; // Transmit Mailbox
-	CAN_TxHeaderTypeDef txMessage;
+HAL_StatusTypeDef CAN_Send_Message(CANMessage message)
+{
+	uint32_t tx_mailbox; // transmit mailbox.
+	CAN_TxHeaderTypeDef tx_header;
 
-	// TX Message Parameters
-	uint16_t ID = (myMessage.priority << 4) | (SOURCE_ID << 2) | (myMessage.DestinationID);
-	uint8_t message[8] = {myMessage.command, myMessage.data[0], myMessage.data[1], myMessage.data[2], myMessage.data[3], myMessage.data[4], myMessage.data[5],myMessage.data[6]};
+	// TX message parameters.
+	uint16_t id = (message.priority << 4) | (s_device_id << 2) | (0x0F & message.destination_id);
 
-	txMessage.StdId = ID;
-	txMessage.IDE = CAN_ID_STD;
-	txMessage.RTR = CAN_RTR_DATA;
-	txMessage.DLC = MAX_CAN_DATA_LENGTH;
+	tx_header.StdId = id;
+	tx_header.IDE = CAN_ID_STD;
+	tx_header.RTR = CAN_RTR_DATA;
+	tx_header.DLC = CAN_MESSAGE_LENGTH;
 
-	while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0){} //wait to send CAN message
+	// wait to send CAN message.
+	while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0){}
 
-	return HAL_CAN_AddTxMessage(&hcan1, &txMessage, message, &txMailbox);
+	return HAL_CAN_AddTxMessage(&hcan1, &tx_header, message.data, &tx_mailbox);
 }
 
 /**
@@ -80,29 +116,25 @@ HAL_StatusTypeDef CAN_Transmit_Message(CANMessage_t myMessage){
  *
  * @return HAL_StatusTypeDef
  */
-HAL_StatusTypeDef CAN_Message_Received(){
+HAL_StatusTypeDef CAN_Message_Received()
+{
     HAL_StatusTypeDef operation_status;
-	CAN_RxHeaderTypeDef rxMessage; // Received Message Header
-	uint8_t rxData[8]; // Received data
-	uint8_t receivedDestinationId; // Destination ID of Received Message
 
-	/* Get RX message */
-	operation_status = HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rxMessage, rxData);
+	CAN_RxHeaderTypeDef rx_header; // message header.
+	CANMessage msg = {0};
+
+	// get CAN message.
+	operation_status = HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rx_header, msg.data);
 	if (operation_status != HAL_OK) goto error;
-	receivedDestinationId = RECEIVED_DESTINATION_ID_MASK & rxMessage.StdId;
 
-	if(receivedDestinationId == SOURCE_ID){
-	    // *NOTE* Send message to queue per your subsystem here
-	    CANMessage_t can_message = {
-	        .priority = rxMessage.RTR == CAN_RTR_REMOTE ? 0x7F : rxMessage.ExtId >> 24,
-	        .SenderID = (RECEIVED_SENDER_ID_MASK & rxMessage.StdId) >> 2,
-	        .DestinationID = receivedDestinationId,
-	        .command = rxData[0],
-	        .data = {rxData[1], rxData[2], rxData[3], rxData[4], rxData[5], rxData[6], rxData[7]}
-	    };
-	    CAN_Queue_Enqueue(&can_queue, &can_message);
+	msg.destination_id = RECEIVED_DESTINATION_ID_MASK & rx_header.StdId;
 
-		// *NOTE* program custom handling per your subsystem here
+	if (msg.destination_id == s_device_id)
+	{
+		msg.priority = rx_header.RTR == CAN_RTR_REMOTE ? 0x7F : rx_header.ExtId >> 24;
+		msg.sender_id = (RECEIVED_SENDER_ID_MASK & rx_header.StdId) >> 2;
+
+	    CANQueue_Enqueue(&s_can_queue, msg);
 	}
 
 error:
@@ -112,36 +144,31 @@ error:
 /**
  * @brief Send a CAN default ACK message for the given CAN message
  *
- * @param myMessage: The received CAN message to send the ACK for
+ * @param message: The received CAN message to send the ACK for
  *
  * @return HAL_StatusTypeDef
  */
-HAL_StatusTypeDef CAN_Send_Default_ACK(CANMessage_t myMessage){
-    CANMessage_t ack_message = {
-        .priority = myMessage.priority,
-        .SenderID = SOURCE_ID,
-        .DestinationID = myMessage.SenderID,
-        .command = 0x01,
-        .data = {myMessage.command, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+HAL_StatusTypeDef CAN_Send_Response(CANMessageBody msg_body, bool success)
+{
+	uint8_t ack_or_nack = success ? CMD_ACK : CMD_NACK;
+
+    CANMessage msg = {
+    		.destination_id = s_received_msg.sender_id,
+			.priority = s_received_msg.priority,
+    		.command_id = ack_or_nack,
+			.body = msg_body
     };
-    return CAN_Transmit_Message(ack_message);
+/*
+    // append data to response.
+    size_t bytes_to_copy = sizeof(msg.body);
+    if (bytes_to_copy > data_size)
+    	bytes_to_copy = data_size;
+    memcpy(msg.body, data, bytes_to_copy);
+*/
+    return CAN_Send_Message(msg);
 }
 
-/**
- * @brief Send a CAN default ACK message for the given CAN message, with data
- *
- * @param myMessage: The received CAN message to send the ACK for
- * @param p_data: The 6 bytes of data to send
- *
- * @return HAL_StatusTypeDef
- */
-HAL_StatusTypeDef CAN_Send_Default_ACK_With_Data(CANMessage_t myMessage, uint8_t *p_data){
-    CANMessage_t ack_message = {
-        .priority = myMessage.priority,
-        .SenderID = SOURCE_ID,
-        .DestinationID = myMessage.SenderID,
-        .command = 0x01,
-        .data = {myMessage.command, p_data[0], p_data[1], p_data[2], p_data[3], p_data[4], p_data[5]}
-    };
-    return CAN_Transmit_Message(ack_message);
+// called when a new CAN message is received and pending.
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1) {
+    CAN_Message_Received();
 }

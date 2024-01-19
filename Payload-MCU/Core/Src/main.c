@@ -65,8 +65,8 @@ void SystemClock_Config(void);
 /* Function used by printf() to direct output to SWO, prototype in syscalls.c */
 int __io_putchar(int ch)
 {
- ITM_SendChar(ch);
- return(ch);
+	ITM_SendChar(ch);
+	return ch;
 }
 
 /* USER CODE END 0 */
