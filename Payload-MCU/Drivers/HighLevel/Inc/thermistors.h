@@ -22,4 +22,13 @@
  */
 bool Thermistors_Get_Temp(WellID well_id, uint16_t *out);
 
+/**
+ * @brief 	Reads the current temperature of a well in degrees celsius.
+ *
+ * @param well_id 	The well to retrieve sensor data from.
+ * @param out 		Where to store the temperature.
+ * @return 			true on success. false on error.
+ */
+bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out);
+
 #endif /* HIGHLEVEL_INC_THERMISTORS_H_ */

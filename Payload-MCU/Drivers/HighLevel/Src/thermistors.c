@@ -20,6 +20,8 @@
 
 static const uint32_t TIMEOUT = 100; // in ms
 
+static const uint16_t ADC_MAX_OUTPUT = 4095;
+
 static const MuxADCLocation ADC_LOCATIONS[] = {
 		{ MUX_CHANNEL_3, ADC_A0 }, // THERM 0
 		{ MUX_CHANNEL_3, ADC_A1 }, // THERM 1
@@ -74,4 +76,15 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 	*out = temp;
 
 	return true;
+}
+
+bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
+{
+	bool success;
+
+	uint16_t adc_value;
+	success = Thermistors_Get_Temp(well_id, &adc_value);
+
+	double normalised_value = (double)adc_value / (double)ADC_MAX_VALUE;
+
 }
