@@ -63,10 +63,16 @@ void SystemClock_Config(void);
 #define LOG_SUBJECT "Core"
 
 /* Function used by printf() to direct output to SWO, prototype in syscalls.c */
-int __io_putchar(int ch)
+__attribute__((weak)) int _write(int file, char *ptr, int len)
 {
-	ITM_SendChar(ch);
-	return ch;
+  (void)file;
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
+    ITM_SendChar(*ptr++);
+  }
+  return len;
 }
 
 /* USER CODE END 0 */

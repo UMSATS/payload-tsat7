@@ -12,14 +12,14 @@
 
 // all possible I2C addresses for ADC's.
 typedef enum {
-	ADC_A0 = 0b1001000,
-	ADC_A1 = 0b1001001,
-	ADC_A2 = 0b1001010,
+	ADC_A0 = 0b1001000 << 1,
+	ADC_A1 = 0b1001001 << 1,
+	ADC_A2 = 0b1001010 << 1,
 //	ADC_A3 = 0b1001011, // NOTE: unused.
-	ADC_A4 = 0b1001100,
-	ADC_A5 = 0b1001101,
-	ADC_A6 = 0b1001110,
-	ADC_A7 = 0b1001111,
+	ADC_A4 = 0b1001100 << 1,
+	ADC_A5 = 0b1001101 << 1,
+	ADC_A6 = 0b1001110 << 1,
+	ADC_A7 = 0b1001111 << 1,
 } ADCAddress;
 
 /*

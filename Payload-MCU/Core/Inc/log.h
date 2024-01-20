@@ -17,6 +17,7 @@
 	#define LOG_INFO(...) \
 		do { \
 			printf("[" LOG_SUBJECT "] " __VA_ARGS__); \
+			printf("\n"); \
 		} while (0)
 
 	#define LOG_ERROR(...) \

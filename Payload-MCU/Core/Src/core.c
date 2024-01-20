@@ -78,6 +78,8 @@ static void report_errors();
 
 void Core_Init()
 {
+	printf("Hello World!\n");
+
 	bool success;
 	HAL_StatusTypeDef status;
 
@@ -100,6 +102,9 @@ void Core_Init()
 		PUSH_ERROR(ERROR_CAN_INIT);
 		Core_Halt();
 	}
+
+	Thermistors_Test();
+
 }
 
 void Core_Update()

@@ -13,6 +13,10 @@
 #include "assert.h"
 #include "log.h"
 
+// remove later
+#include "power.h"
+#include "tca9539.h"
+
 #include "i2c.h"
 
 #include <stdint.h>
@@ -85,6 +89,24 @@ bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
 	uint16_t adc_value;
 	success = Thermistors_Get_Temp(well_id, &adc_value);
 
-	double normalised_value = (double)adc_value / (double)ADC_MAX_VALUE;
+	double normalised_value = (double)adc_value / (double)ADC_MAX_OUTPUT;
+
+	return true;
+}
+
+void Thermistors_Test() {
+
+	uint8_t result;
+
+//	for (int i = 0; i < 16; i++) {
+//
+//		Thermistors_Get_Temp(i, &result);
+//
+//	}
+
+	Power result1;
+	Thermistors_Get_Temp(6, &result);
+	TCA9539_Set_Pin(0, 0, (Power)1);
+	result1 = TCA9539_Get_Pin(0, 0);
 
 }

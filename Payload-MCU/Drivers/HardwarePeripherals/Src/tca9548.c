@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static const uint16_t I2C_ADDRESS = 0x70;  // I2C address of the multiplexer
+static const uint16_t I2C_ADDRESS = 0x70 << 1;  // I2C address of the multiplexer
 static const uint32_t TIMEOUT = 100;       // in ms
 
 #define LOG_SUBJECT "TCA9548"
@@ -32,7 +32,7 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 	}
 
 	// create an array of 1 byte and copy the value in channel_number
-	uint8_t command_register[1] = {channel};
+	uint8_t command_register[1] = {1 << channel};
 
 	// usage: i2c object, device addr, payload, payload size (bytes), timeout (ms)
 	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS, command_register, 1, TIMEOUT);

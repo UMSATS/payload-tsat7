@@ -19,8 +19,8 @@ static const uint32_t TIMEOUT = 100;
 
 // I2C addresses of each IO expander.
 static const uint8_t EXPANDER_I2C_ADDRESSES[] = {
-		0x74, 	// IO Expander 1 (Wells 1-8)
-		0x75	// IO Expander 2 (Wells 9-16)
+		0x74 << 1, 	// IO Expander 1 (Wells 1-8)
+		0x75 << 1 	// IO Expander 2 (Wells 9-16)
 };
 
 typedef enum {
@@ -199,7 +199,7 @@ static bool check_params(ExpanderID device, ExpanderPinID pin)
 		return false;
 	}
 
-	if (pin >= EXPANDER_PIN_0 && pin <= EXPANDER_PIN_17)
+	if (pin < EXPANDER_PIN_0 || pin > EXPANDER_PIN_17)
 	{
 		LOG_ERROR("invalid pin: %d.", pin);
 		return false;
