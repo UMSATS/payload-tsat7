@@ -93,20 +93,3 @@ bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
 
 	return true;
 }
-
-void Thermistors_Test() {
-
-	uint8_t result;
-
-//	for (int i = 0; i < 16; i++) {
-//
-//		Thermistors_Get_Temp(i, &result);
-//
-//	}
-
-	Power result1;
-	Thermistors_Get_Temp(6, &result);
-	TCA9539_Set_Pin(0, 0, (Power)1);
-	result1 = TCA9539_Get_Pin(0, 0);
-
-}

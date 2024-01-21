@@ -102,9 +102,6 @@ void Core_Init()
 		PUSH_ERROR(ERROR_CAN_INIT);
 		Core_Halt();
 	}
-
-	Thermistors_Test();
-
 }
 
 void Core_Update()

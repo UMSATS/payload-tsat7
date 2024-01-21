@@ -19,8 +19,8 @@ static const uint32_t TIMEOUT = 100;
 
 // I2C addresses of each IO expander.
 static const uint8_t EXPANDER_I2C_ADDRESSES[] = {
-		0x74 << 1, 	// IO Expander 1 (Wells 1-8)
-		0x75 << 1 	// IO Expander 2 (Wells 9-16)
+		0x74 << 1, 	// IO Expander 1 (Wells 0-7)
+		0x75 << 1 	// IO Expander 2 (Wells 8-15)
 };
 
 typedef enum {

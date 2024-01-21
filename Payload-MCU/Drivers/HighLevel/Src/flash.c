@@ -50,6 +50,7 @@ bool Flash_Write_LED_Status(int id, uint8_t d1p1, uint8_t d1p2, uint8_t d2p1, ui
 
 	HAL_FLASH_Lock();
 
+	return true;
 }
 
 Power Flash_Read_LED_Status(int id) {
@@ -67,6 +68,7 @@ bool Flash_Write_Well_Temperature(int id, uint8_t temp) {
 //	HAL_FLASH_Program(FLASH_TYPEPROGRAM_FAST, FLASH_WELL_TEMP_STRUCT_ADDR + (id * sizeof(int8_t)), temp);
 	HAL_FLASH_Lock();
 
+	return true;
 }
 
 int8_t Flash_Read_Well_Temperature(int id) {
