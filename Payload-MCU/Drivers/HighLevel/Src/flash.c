@@ -5,12 +5,12 @@
  *      Author: Jascha Petersen
  */
 
+#include "main.h"
+#include "power.h"
+#include "error_context.h"
+
 #include <stdint.h>
 #include <stdbool.h>
-#include "main.h"
-
-#include "error_stack.h"
-#include "power.h"
 
 // Boundaries of the available flash memory
 #define FLASH_BOUNDARY_MIN_ADDR 		0x08000000
@@ -59,14 +59,17 @@ Power Flash_Read_LED_Status(int id) {
 	addr = (Power*) (FLASH_LED_STATUS_STRUCT_ADDR + (id * sizeof(Power)));
 
 	return *addr;
-
 }
 
 bool Flash_Write_Well_Temperature(int id, uint8_t temp) {
 
 	HAL_FLASH_Unlock();
-//	HAL_FLASH_Program(FLASH_TYPEPROGRAM_FAST, FLASH_WELL_TEMP_STRUCT_ADDR + (id * sizeof(int8_t)), temp);
+	HAL_FLASH_Program(FLASH_TYPEPROGRAM_FAST, FLASH_WELL_TEMP_STRUCT_ADDR + (id * sizeof(int8_t)), temp);
 	HAL_FLASH_Lock();
+
+	if (HAL_FLASH_GetError() != HAL_FLASH_ERROR_NONE) {
+	    // Handle error
+	}
 
 	return true;
 }

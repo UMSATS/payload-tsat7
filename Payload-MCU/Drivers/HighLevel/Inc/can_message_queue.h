@@ -27,7 +27,7 @@ typedef struct {
 } CANQueue;
 
 /*
- * DESCRIPTION: Creates a new CAN queue.
+ * DESCRIPTION: Creates a CAN queue.
  */
 CANQueue CANQueue_Create();
 

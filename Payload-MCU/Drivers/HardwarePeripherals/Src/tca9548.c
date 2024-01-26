@@ -35,7 +35,7 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 	uint8_t command_register[1] = {1 << channel};
 
 	// usage: i2c object, device addr, payload, payload size (bytes), timeout (ms)
-	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS, command_register, 1, TIMEOUT);
+	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS << 1, command_register, 1, TIMEOUT);
 
 	if (status != HAL_OK)
 	{

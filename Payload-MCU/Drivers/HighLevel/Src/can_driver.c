@@ -20,10 +20,10 @@
 //|ACK|CMD|DA0|DA1|DA2|DA3|DA4|DA5|DA6|
 // ````````````````````````````````````
 
+#include <error_context.h>
 #include "can_driver.h"
 #include "can_message_queue.h"
 #include "assert.h"
-
 #include <stdio.h>
 #include <string.h>
 
@@ -48,11 +48,11 @@ HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback)
 	ASSERT(device_id <= 0x03);
 	ASSERT(callback != NULL);
 
-    HAL_StatusTypeDef operation_status;
+	HAL_StatusTypeDef operation_status;
 
-    s_device_id = device_id;
-    s_message_callback = callback;
-    s_received_msg = (CANMessage){0};
+	s_device_id = device_id;
+	s_message_callback = callback;
+	s_received_msg = (CANMessage){0};
 
 	const CAN_FilterTypeDef filter_config = {
 			.FilterFIFOAssignment = CAN_FILTER_FIFO0,
@@ -63,7 +63,11 @@ HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback)
 	};
 
 	operation_status = HAL_CAN_ConfigFilter(&hcan1, &filter_config);
-	if (operation_status != HAL_OK) goto error;
+	if (operation_status != HAL_OK)
+	{
+		PUSH_ERROR(ERROR_CAN_CONFIG_FILTER);
+		goto error;
+	}
 
 	operation_status = HAL_CAN_Start(&hcan1);
 	if (operation_status != HAL_OK) goto error;

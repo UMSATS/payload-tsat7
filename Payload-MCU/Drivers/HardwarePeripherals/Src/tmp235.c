@@ -8,9 +8,8 @@
 #include "tmp235.h"
 #include "assert.h"
 #include "log.h"
-#include "error_stack.h"
-
 #include "adc.h"
+#include "error_context.h"
 
 #include <stdint.h>
 #include <stdbool.h>
