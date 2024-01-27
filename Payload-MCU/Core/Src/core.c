@@ -343,7 +343,7 @@ static void report_errors()
 
 		CANMessage msg = {
 				.destination_id = CDH_ID,
-				.priority = 10,
+				.priority = 0,
 				.command_id = CMD_REPORT_ERROR,
 				.body = {
 						.data = {0}
