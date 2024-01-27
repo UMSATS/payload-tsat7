@@ -34,13 +34,17 @@
 // [ ] Fix CAN not working with SOTI.
 // [ ] Finish idle/active state logic.
 // [ ] Finish adding PUSH_ERROR calls next to LOG_ERROR calls.
+// [ ] Implement remaining commands.
 
 // Can ID's
 #define DEVICE_ID 0x03 // this device.
 #define CDH_ID    0x01 // CDH.
 
+// Common commands.
+#define CMD_SHUTDOWN 0x10 // TODO
+
 // Payload commands.
-#define CMD_RESET          0xA0
+#define CMD_RESET          0xA0 // TODO
 #define CMD_LED_ON         0xA1
 #define CMD_LED_OFF        0xA2
 #define CMD_HEATER_ON      0xA5
@@ -48,9 +52,9 @@
 #define CMD_GET_BOARD_TEMP 0xA7
 #define CMD_GET_WELL_LIGHT 0xA8
 #define CMD_GET_WELL_TEMP  0xA9
-#define CMD_DATA_INTERVAL  0xAA
-#define CMD_LED_TEST       0xAB
-#define CMD_GET_BASELINE   0xAC
+#define CMD_DATA_INTERVAL  0xAA // TODO: test if functional.
+#define CMD_LED_TEST       0xAB // TODO
+#define CMD_GET_BASELINE   0xAC // TODO
 
 // CDH commands
 #define CMD_REPORT_ERROR      0x51
