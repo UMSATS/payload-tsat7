@@ -126,6 +126,7 @@ bool TCA9539_Clear_Pins()
  * @param out		8-bit register.
  * @return 			true on success. false on error.
  */
+#define OUTPUT_PORT_OFFSET 3
 static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 {
 	HAL_StatusTypeDef status;
@@ -178,6 +179,8 @@ static bool set_port(ExpanderID device, PortID port, uint8_t bitmap)
 		LOG_ERROR("failed to transmit message { port address: 0x%02X, bitmap: 0x%02X } to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
 		return false;
 	}
+
+//	Flash_Write(OUTPUT_PORT_OFFSET, &bitmap, 1);
 
 	return true;
 }

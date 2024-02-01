@@ -12,6 +12,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define BLOCK_COUNTER_ADDRESS 0x08000000
+#define BLOCK_START_ADDRESS   0x08000001
+#define BLOCK_END_ADDRESS     0x08100000
+#define BLOCK_SIZE 32
+
+size_t current_block = 0;
+uint8_t block_buffer[BLOCK_SIZE];
+
+// output ports: 2 bytes
+// temperatures: 16 bytes
+// active states: 16 bytes
+
 // Boundaries of the available flash memory
 #define FLASH_BOUNDARY_MIN_ADDR 		0x08000000
 #define FLASH_BOUNDARY_MAX_ADDR 		0x08080000
