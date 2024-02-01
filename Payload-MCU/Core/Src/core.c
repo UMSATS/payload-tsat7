@@ -79,14 +79,6 @@ static void report_errors();
 
 #define LOG_SUBJECT "Core"
 
-
-typedef struct SENSOR_DATA_STRUCT {
-
-	uint16_t therm_data[16];
-	uint16_t light_data[16];
-
-} Sensor_Data_Struct;
-
 void Core_Init()
 {
 	bool success;
@@ -111,27 +103,6 @@ void Core_Init()
 		LOG_ERROR("failed to initialise CAN driver.");
 		PUSH_ERROR(ERROR_CAN_INIT);
 	}
-
-//	Sensor_Data_Struct mydata;
-//
-//	uint16_t temp;
-//
-//	for (int i = 0; i < 16; i++) {
-//		Thermistors_Get_Temp(i, &temp);
-//		mydata.therm_data[i] = temp;
-//
-//		Photocells_Get_Light_Level(i, &temp);
-//		mydata.light_data[i] = temp;
-//	}
-//
-//	LOG_INFO("________________________");
-//	LOG_INFO("| WELL  | TEMPS | LIGHT |");
-//	LOG_INFO("|-----------------------|");
-//	for (int i = 0; i < 16; i++)
-//	{
-//		LOG_INFO("| %6d| %6d| %6d|", i, mydata.therm_data[i], mydata.light_data[i]);
-//	}
-//	LOG_INFO("-------------------------");
 }
 
 void Core_Update()

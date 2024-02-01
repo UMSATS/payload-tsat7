@@ -31,6 +31,6 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out);
  */
 bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out);
 
-void Thermistors_Test();
+void Thermistors_Print_Debug_Info();
 
 #endif /* HIGHLEVEL_INC_THERMISTORS_H_ */

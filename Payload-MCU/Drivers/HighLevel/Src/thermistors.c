@@ -94,3 +94,28 @@ bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
 	return true;
 }
 
+void Thermistors_Print_Debug_Info()
+{
+	uint16_t therm_data[16];
+	uint16_t light_data[16];
+
+	uint16_t temp;
+
+	for (int i = 0; i < 16; i++)
+	{
+		Thermistors_Get_Temp(i, &temp);
+		therm_data[i] = temp;
+
+		Photocells_Get_Light_Level(i, &temp);
+		light_data[i] = temp;
+	}
+
+	LOG_INFO("_________________________");
+	LOG_INFO("| WELL  | TEMPS | LIGHT |");
+	LOG_INFO("|-----------------------|");
+	for (int i = WELL_0; i <= WELL_15; i++)
+	{
+		LOG_INFO("| %6d| %6d| %6d|", i, therm_data[i], light_data[i]);
+	}
+	LOG_INFO("-------------------------");
+}
