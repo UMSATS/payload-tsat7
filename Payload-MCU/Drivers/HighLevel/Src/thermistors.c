@@ -93,3 +93,4 @@ bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
 
 	return true;
 }
+

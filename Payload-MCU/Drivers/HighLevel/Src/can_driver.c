@@ -54,13 +54,17 @@ HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback)
 	s_message_callback = callback;
 	s_received_msg = (CANMessage){0};
 
-	const CAN_FilterTypeDef filter_config = {
-			.FilterFIFOAssignment = CAN_FILTER_FIFO0,
-			.FilterMode           = CAN_FILTERMODE_IDMASK,
-			.FilterScale          = CAN_FILTERSCALE_32BIT,
-			.FilterActivation     = ENABLE,
-			.SlaveStartFilterBank = 14,
-	};
+	CAN_FilterTypeDef sFilterConfig;
+	sFilterConfig.FilterIdHigh = 0x0000;
+	sFilterConfig.FilterIdLow = 0x0000;
+	sFilterConfig.FilterMaskIdHigh = 0x0000;
+	sFilterConfig.FilterMaskIdLow = 0x0000;
+	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	sFilterConfig.FilterActivation = ENABLE;
+	sFilterConfig.SlaveStartFilterBank = 14;
 
 	operation_status = HAL_CAN_ConfigFilter(&hcan1, &filter_config);
 	if (operation_status != HAL_OK)
@@ -70,10 +74,14 @@ HAL_StatusTypeDef CAN_Init(uint8_t device_id, CANMessageCallback callback)
 	}
 
 	operation_status = HAL_CAN_Start(&hcan1);
+
+	operation_status = HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
+	if (operation_status != HAL_OK) goto error;
+	operation_status = HAL_CAN_Start(&hcan1); // Turn on the CAN Bus
+
 	if (operation_status != HAL_OK) goto error;
 
 	operation_status = HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-	if (operation_status != HAL_OK) goto error;
 
 	s_can_queue = CANQueue_Create();
 
@@ -102,7 +110,7 @@ HAL_StatusTypeDef CAN_Send_Message(CANMessage message)
 	CAN_TxHeaderTypeDef tx_header;
 
 	// TX message parameters.
-	uint16_t id = (message.priority << 4) | (s_device_id << 2) | (0x0F & message.destination_id);
+	uint16_t id = (0b00000000 << 4) | (0x3 << 2) | (0x1);
 
 	tx_header.StdId = id;
 	tx_header.IDE = CAN_ID_STD;
@@ -112,7 +120,9 @@ HAL_StatusTypeDef CAN_Send_Message(CANMessage message)
 	// wait to send CAN message.
 	while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0){}
 
-	return HAL_CAN_AddTxMessage(&hcan1, &tx_header, message.data, &tx_mailbox);
+	uint8_t myarray[] =  {0x1, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+	return HAL_CAN_AddTxMessage(&hcan1, &tx_header, myarray, &tx_mailbox);
 }
 
 /**
