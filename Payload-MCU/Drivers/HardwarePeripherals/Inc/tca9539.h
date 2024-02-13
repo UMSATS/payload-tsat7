@@ -52,7 +52,7 @@ bool TCA9539_Init();
  *
  * @return 1 if set, 0 if unset. -1 on error.
  */
-int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin);
+int TCA9539_Get_Pin(ExpanderID device, ExpanderPinID pin); // TODO: inconsistent signature.
 
 /**
  * @brief Sets or unsets a pin on one of the expanders.

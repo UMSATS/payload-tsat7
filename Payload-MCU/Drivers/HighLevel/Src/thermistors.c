@@ -54,13 +54,14 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
+		PUSH_ERROR(ERROR_INVALID_WELL_ID);
 		return false;
 	}
 
-	bool success = TCA9548_Set_I2C_Channel(ADC_LOCATIONS[well_id].channel);
-	if (!success)
+	if (!TCA9548_Set_I2C_Channel(ADC_LOCATIONS[well_id].channel))
 	{
 		LOG_ERROR("failed to read temperature in well %d: could not switch channel.", well_id);
+		PUSH_ERROR(ERROR_TCA9548_SET_CHANNEL);
 		return false;
 	}
 
@@ -72,6 +73,7 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to read temperature in well %d. (HAL error code: %d)", well_id, status);
+		PUSH_ERROR(ERROR_I2C_RECEIVE, status);
 		return false;
 	}
 
@@ -91,31 +93,5 @@ bool Thermistors_Get_Temp_Celsius(WellID well_id, double *out)
 
 	double normalised_value = (double)adc_value / (double)ADC_MAX_OUTPUT;
 
-	return true;
-}
-
-void Thermistors_Print_Debug_Info()
-{
-	uint16_t therm_data[16];
-	uint16_t light_data[16];
-
-	uint16_t temp;
-
-	for (int i = 0; i < 16; i++)
-	{
-		Thermistors_Get_Temp(i, &temp);
-		therm_data[i] = temp;
-
-		Photocells_Get_Light_Level(i, &temp);
-		light_data[i] = temp;
-	}
-
-	LOG_INFO("_________________________");
-	LOG_INFO("| WELL  | TEMPS | LIGHT |");
-	LOG_INFO("|-----------------------|");
-	for (int i = WELL_0; i <= WELL_15; i++)
-	{
-		LOG_INFO("| %6d| %6d| %6d|", i, therm_data[i], light_data[i]);
-	}
-	LOG_INFO("-------------------------");
+	return success;
 }

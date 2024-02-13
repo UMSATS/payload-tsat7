@@ -1,19 +1,14 @@
-/*
- * FILENAME: can_message_queue.c
+/**
+ * @file can_queue.c
+ * Queue ADT for storing CAN messages.
  *
- * DESCRIPTION: CAN message queue implementation source file.
+ * @author Logan Furedi <logan.furedi@umsats.ca>
+ * @author Om Sevak <om.sevak@umsats.ca>
  *
- * AUTHORS:
- *  - Om Sevak (om.sevak@umsats.ca)
- *  - Logan Furedi
- *
- * CREATED ON: April 30, 2023
+ * @date February 12, 2024
  */
 
-#include "can_message_queue.h"
-
-#include <string.h>
-#include <stdbool.h>
+#include <can_queue.h>
 
 CANQueue CANQueue_Create()
 {

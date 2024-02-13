@@ -17,7 +17,7 @@
 			if (!(cond)) \
 			{ \
 				fprintf(stderr, "[Core] Assertion failed: '" #cond "' (%s:%i)\r\n", __FILE__, __LINE__); \
-				halt_program(); \
+				assertion_failed(); \
 			} \
 		} while (0)
 
@@ -28,7 +28,7 @@
 				fprintf(stderr, "[Core] Assertion failed: '" #cond "' (%s:%i)\r\n", __FILE__, __LINE__); \
 				fprintf(stderr, "  Debug Message: " __VA_ARGS__); \
 				fprintf(stderr, "\r\n"); \
-				halt_program();
+				assertion_failed();
 			} \
 		} while (0)
 

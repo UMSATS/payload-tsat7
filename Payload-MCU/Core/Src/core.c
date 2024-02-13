@@ -5,26 +5,31 @@
  *      Author: Logan Furedi
  */
 
-#include "core.h"
-#include "can_driver.h"
-#include "can_message_queue.h"
-#include "max6822.h"
-#include "tca9539.h"
-#include "tca9548.h"
-#include "tmp235.h"
-#include "heaters.h"
-#include "leds.h"
-#include "photocells.h"
-#include "thermistors.h"
-#include "log.h"
-#include "error_context.h"
-
-#include "stm32l4xx_hal_def.h"
-
-// include htim2.
-#include "tim.h"
-
+#include <can.h>
+#include <can_message.h>
+#include <can_wrapper.h>
+#include <cmsis_gcc.h>
+#include <error_context.h>
+#include <heaters.h>
+#include <leds.h>
+#include <log.h>
+#include <max6822.h>
+#include <photocells.h>
+#include <power.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stm32l452xx.h>
+#include <stm32l4xx_hal_def.h>
+#include <stm32l4xx_hal_tim.h>
 #include <string.h>
+#include <sys/_stdint.h>
+#include <tca9539.h>
+#include <thermistors.h>
+#include <tim.h>
+#include <tmp235.h>
+#include <well_id.h>
+#include "core.h"
 
 // TODO:
 // [ ] Setup timer for TCS.
@@ -76,13 +81,14 @@ static void on_message_received(CANMessage msg);
 static void report_well_temp_data(WellID well_id);
 static void report_well_light_data(WellID well_id);
 static void report_errors();
+static void print_well_info();
 
 #define LOG_SUBJECT "Core"
 
 void Core_Init()
 {
 	bool success;
-	HAL_StatusTypeDef status;
+	CANWrapper_StatusTypeDef cw_status;
 
 	state = IDLE;
 
@@ -97,19 +103,25 @@ void Core_Init()
 		PUSH_ERROR(ERROR_TCA9539_INIT);
 	}
 
-	status = CAN_Init(DEVICE_ID, on_message_received);
-	if (status != HAL_OK)
+	cw_status = CANWrapper_Init(&hcan1, DEVICE_ID, &on_message_received);
+	if (cw_status != CAN_WRAPPER_HAL_OK)
 	{
-		LOG_ERROR("failed to initialise CAN driver.");
-		PUSH_ERROR(ERROR_CAN_INIT);
+		LOG_ERROR("failed to initialise CAN wrapper.");
+		PUSH_ERROR(ERROR_CAN_WRAPPER_INIT, cw_status);
 	}
+	else
+	{
+		// TODO: disable CAN in this case?
+	}
+
+	report_errors();
 }
 
 void Core_Update()
 {
 	MAX6822_Reset_Timer();
 
-	CAN_Poll_Messages();
+	CANWrapper_Poll_Messages();
 
 	report_errors();
 }
@@ -128,20 +140,20 @@ void Core_Halt()
 static void on_message_received(CANMessage msg)
 {
 	ErrorBuffer cmd_error_buffer; // stores command errors.
-	CANMessageBody response_body = { .data = { msg.command_id } };
-
 	ErrorContext_Push_Buffer(&cmd_error_buffer);
+
+	CANMessageBody response_body = { .data = { msg.command_id } };
 
 	// the reset command is a special case.
 	if (msg.command_id == CMD_RESET)
 	{
-		CAN_Send_Response(response_body, true);
+		CANWrapper_Send_Response(true, response_body);
 		MAX6822_Manual_Reset();
 		Core_Halt(); // wait for the hard reset.
 		return;
 	}
 
-	bool success = true;
+	bool success = false;
 	uint8_t response_data_size = 0;
 
 	switch (msg.command_id)
@@ -178,36 +190,38 @@ static void on_message_received(CANMessage msg)
 		{
 			uint16_t temp;
 			success = TMP235_Read_Temp(&temp);
-			if (!success)
+			if (success)
 			{
-				PUSH_ERROR(ERROR_TMP235_READ_TEMP);
+				response_body.data[1] = (uint8_t)(temp & 0x00FF);
+				response_body.data[2] = (uint8_t)(temp & 0xFF00 >> 8);
+				response_data_size = 2;
 			}
-
-			response_body.data[1] = (uint8_t)(temp & 0x00FF);
-			response_body.data[2] = (uint8_t)(temp & 0xFF00);
-			response_data_size = 2;
 			break;
 		}
 		case CMD_GET_WELL_LIGHT:
 		{
 			uint16_t light;
 			success = Photocells_Get_Light_Level(msg.data[1], &light);
-
-			response_body.data[1] = msg.data[1];
-			response_body.data[2] = (uint8_t)(light & 0x00FF);
-			response_body.data[3] = (uint8_t)(light & 0xFF00);
-			response_data_size = 3;
+			if (success)
+			{
+				response_body.data[1] = msg.data[1];
+				response_body.data[2] = (uint8_t)(light & 0x00FF);
+				response_body.data[3] = (uint8_t)(light & 0xFF00 >> 8);
+				response_data_size = 3;
+			}
 			break;
 		}
 		case CMD_GET_WELL_TEMP:
 		{
 			uint16_t temp;
 			success = Thermistors_Get_Temp(msg.data[1], &temp);
-
-			response_body.data[1] = msg.data[1];
-			response_body.data[2] = (uint8_t)(temp & 0x00FF);
-			response_body.data[3] = (uint8_t)(temp & 0xFF00);
-			response_data_size = 3;
+			if (success)
+			{
+				response_body.data[1] = msg.data[1];
+				response_body.data[2] = (uint8_t)(temp & 0x00FF);
+				response_body.data[3] = (uint8_t)(temp & 0xFF00 >> 8);
+				response_data_size = 3;
+			}
 			break;
 		}
 		case CMD_DATA_INTERVAL:
@@ -221,11 +235,12 @@ static void on_message_received(CANMessage msg)
 
 			// set interrupt timer period.
 			__HAL_TIM_SET_AUTORELOAD(&htim2, period);
+
+			success = true;
 			break;
 		}
 		default:
 		{
-			success = false;
 			LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
 			PUSH_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
 			break;
@@ -246,7 +261,7 @@ static void on_message_received(CANMessage msg)
 		memcpy(response_body.data + 1 + response_data_size, cmd_error_buffer.data, bytes_to_copy);
 	}
 
-	CAN_Send_Response(response_body, success);
+	CANWrapper_Send_Response(success, response_body);
 
 	ErrorContext_Pop_Buffer();
 }
@@ -280,7 +295,7 @@ static void report_well_temp_data(WellID well_id)
 	}
 
 	CANMessage msg = {
-			.destination_id = CDH_ID,
+			.recipient_id = CDH_ID,
 			.priority = 3,
 			.command_id = CMD_REPORT_WELL_TEMP,
 			.body = {
@@ -295,7 +310,7 @@ static void report_well_temp_data(WellID well_id)
 
 	temp_sequence++;
 
-	CAN_Send_Message(msg);
+	CANWrapper_Send_Message(msg);
 }
 
 // function to get light level data, package it and send it through CAN
@@ -311,7 +326,7 @@ static void report_well_light_data(WellID well_id)
 	}
 
 	CANMessage msg = {
-			.destination_id = CDH_ID,
+			.recipient_id = CDH_ID,
 			.priority = 31,
 			.command_id = CMD_REPORT_WELL_LIGHT,
 			.body = {
@@ -326,7 +341,7 @@ static void report_well_light_data(WellID well_id)
 
 	temp_sequence++;
 
-	CAN_Send_Message(msg);
+	CANWrapper_Send_Message(msg);
 }
 
 /*
@@ -342,7 +357,7 @@ static void report_errors()
 			body_length = CAN_MESSAGE_LENGTH-1;
 
 		CANMessage msg = {
-				.destination_id = CDH_ID,
+				.recipient_id = CDH_ID,
 				.priority = 0,
 				.command_id = CMD_REPORT_ERROR,
 				.body = {
@@ -352,8 +367,34 @@ static void report_errors()
 
 		memcpy(msg.body.data, &s_error_buffer.data, (size_t)body_length);
 
-		CAN_Send_Message(msg);
+		CANWrapper_Send_Message(msg);
 
 		ErrorBuffer_Clear(&s_error_buffer);
 	}
+}
+
+static void print_well_info()
+{
+	uint16_t therm_data[16];
+	uint16_t light_data[16];
+
+	uint16_t temp;
+
+	for (int i = 0; i < 16; i++)
+	{
+		Thermistors_Get_Temp(i, &temp);
+		therm_data[i] = temp;
+
+		Photocells_Get_Light_Level(i, &temp);
+		light_data[i] = temp;
+	}
+
+	LOG_INFO("_________________________");
+	LOG_INFO("| WELL  | TEMPS | LIGHT |");
+	LOG_INFO("|-----------------------|");
+	for (int i = WELL_0; i <= WELL_15; i++)
+	{
+		LOG_INFO("| %6d| %6d| %6d|", i, therm_data[i], light_data[i]);
+	}
+	LOG_INFO("-------------------------");
 }

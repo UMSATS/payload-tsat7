@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "assert.h"
 #include "log.h"
+#include "error_context.h"
 
 #include "i2c.h"
 
@@ -48,6 +49,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
+		PUSH_ERROR(ERROR_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -55,6 +57,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (!success)
 	{
 		LOG_ERROR("failed to read light level in well %d: could not switch channel.", well_id);
+		PUSH_ERROR(ERROR_TCA9548_SET_CHANNEL);
 		return false;
 	}
 
@@ -66,6 +69,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to read light level in well %d. (HAL error code: %d)", well_id, status);
+		PUSH_ERROR(ERROR_I2C_RECEIVE, status);
 		return false;
 	}
 

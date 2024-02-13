@@ -11,6 +11,7 @@
 #include "tca9539.h"
 #include "expander_pin_location.h"
 #include "log.h"
+#include "error_context.h"
 
 #include <stdbool.h>
 
@@ -42,6 +43,7 @@ bool Heaters_Set_Heater(WellID well_id, Power power)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
+		PUSH_ERROR(ERROR_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -49,7 +51,10 @@ bool Heaters_Set_Heater(WellID well_id, Power power)
 	bool success = TCA9539_Set_Pin(location.device, location.pin, power);
 
 	if (!success)
+	{
 		LOG_ERROR("failed to set heater %d to %s", well_id, power ? "ON" : "OFF");
+		PUSH_ERROR(ERROR_TCA9539_SET_PIN);
+	}
 
 	return success;
 }
