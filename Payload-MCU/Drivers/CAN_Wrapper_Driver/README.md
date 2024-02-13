@@ -1,15 +1,25 @@
 # CAN Wrapper
 
-This module implements a simple wrapper interface around the HAL interface for CAN to simplify sending & receiving messages on the TSAT satellite. Note that it is **not** all that is needed to get CAN up and running on a fresh HAL project.
+This module implements a simple wrapper interface around HAL's interface for CAN to simplify sending & receiving messages onboard the TSAT satellite.
 
-You will need to:
+## Importing
 
-1. Enable CAN in your `.ioc` file under `Pinout & Configuration > Connectivity`.
+You will need CAN set up in order to use this module.
+
+To set up CAN, you will need to:
+
+1. Enable a CAN peripheral in your `.ioc` file under `Pinout & Configuration > Connectivity`.
 2. Enable `RX0 interrupt` in `CAN1 > NVIC Settings`.
-2. Regenerate code.
-3. Ensure initialization code has been generated in `main.c`
-4. Ensure you have this module under `Drivers/`
-5. Call `CANWrapper_Init` somewhere after CAN is initialized. (you will need to include `can_wrapper.h`)
+3. Regenerate code.
+4. Ensure initialization code has been generated in `main.c`
+
+To import CAN Wrapper you will need to:
+
+1. Copy this folder into your HAL project under `Drivers/`.
+2. From STM32CubeIDE, right click on the `CAN_Wrapper_Driver/Inc` folder and click `Add/remove include path...`.
+3. Leave all configurations selected and hit `OK`.
+4. Call `CANWrapper_Init` somewhere after CAN is initialized (you will need to include `can_wrapper.h`).
+5. Pass in a pointer to the CAN peripheral you are using (typically CAN1).
 
 ## Initialisation
 
