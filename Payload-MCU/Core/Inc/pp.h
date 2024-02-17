@@ -1,23 +1,37 @@
-/*
- * pp.h
+/**
+ * @file pp.h
+ * A collection of useful preprocessor macros.
  *
- *  Created on: Jan 15, 2024
- *      Author: Logan Furedi
+ * @date Jan 15, 2024
+ * @author Logan Furedi
  */
 
 #ifndef INC_PP_H_
 #define INC_PP_H_
 
-// expands args before concatenation
-#define CONCAT_(a, b) a ## b
+////////////////////////////////////////////////////////
+/// PUBLIC MACROS
+////////////////////////////////////////////////////////
+
+// expands args before concatenation.
 #define CONCAT(a, b) CONCAT_(a, b)
 
 // 1 when one argument passed. 0 otherwise.
-#define IS_ONE_ARG_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,...)_10
 #define IS_ONE_ARG(...)IS_ONE_ARG_(__VA_ARGS__,0,0,0,0,0,0,0,0,0,1,)
 
 // get number of arguments in variadic macro (max 62 args)
-#define NUM_ARGS(...) (NARG_(_0, ## __VA_ARGS__, RSEQ_()))
+#define NUM_ARGS(...) NARG_(_0, ## __VA_ARGS__, RSEQ_())
+
+// for compile-time assertions.
+#define CASSERT(condition, file) CASSERT_LINE_(condition,__LINE__,file)
+
+////////////////////////////////////////////////////////
+/// INTERNAL MACROS
+////////////////////////////////////////////////////////
+
+#define CONCAT_(a, b) a ## b
+
+#define IS_ONE_ARG_(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,...)_10
 
 #define NARG_(...) ARG_(__VA_ARGS__)
 
@@ -37,5 +51,8 @@
 	29,28,27,26,25,24,23,22,21,20, \
 	19,18,17,16,15,14,13,12,11,10, \
 	9,8,7,6,5,4,3,2,1,0
+
+#define CASSERT_LINE_(condition, line, file) \
+    typedef char CONCAT(assertion_failed_##file##_,line)[2*!!(condition)-1];
 
 #endif /* INC_PP_H_ */

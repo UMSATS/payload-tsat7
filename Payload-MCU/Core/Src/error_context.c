@@ -21,7 +21,7 @@ typedef struct
 	size_t buffer_stack_size;
 } ErrorContext;
 
-ErrorContext s_context;
+static ErrorContext s_context;
 
 static bool push_byte(ErrorBuffer *buffer, uint8_t byte);
 

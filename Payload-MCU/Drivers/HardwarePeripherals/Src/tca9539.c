@@ -177,6 +177,7 @@ static bool set_port(ExpanderID device, PortID port, uint8_t bitmap)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to transmit message { port address: 0x%02X, bitmap: 0x%02X } to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
+
 		return false;
 	}
 
