@@ -1,6 +1,6 @@
 # CAN Wrapper
 
-This module implements a simple wrapper interface around HAL's interface for CAN to simplify sending & receiving messages onboard the TSAT satellite.
+This module wraps a simpler interface around HAL's CAN interface for sending & receiving messages onboard the TSAT satellite.
 
 ## Importing
 
@@ -41,11 +41,11 @@ void on_message_received(CANMessage msg)
 	// the reset command is a special case. (you must send a response FIRST)
 	if (msg.command_id == CMD_RESET)
 	{
-		CANWrapper_Send_Response(response_body, true);
+		CANWrapper_Send_Response(true, response_body);
 		Perform_Manual_Reset(); // implement this as per your subsystem.
 	}
 
-	HAL_StatusTypedef status = HAL_OK; // use an appropriate enum in your case.
+	HAL_StatusTypeDef status = HAL_OK; // use an appropriate enum in your case.
 	uint8_t response_data_size = 0;
 
 	switch (msg.command_id)

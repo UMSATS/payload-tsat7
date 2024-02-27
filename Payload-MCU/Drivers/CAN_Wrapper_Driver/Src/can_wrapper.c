@@ -24,29 +24,22 @@
 #define SENDER_ID_MASK    0b00000001100
 #define RECIPIENT_ID_MASK 0b00000000011
 
-#define CMD_ACK   0x01
-#define CMD_NACK  0x02
 
-static CANQueue s_can_queue;
-static uint8_t s_device_id; // the ID for THIS device. max value: 0x3
-static CANMessageCallback s_message_callback;
-static CANMessage s_received_msg; // the current message being processed.
-static CAN_HandleTypeDef *s_hcan_ptr = NULL;
+
+static CANWrapper_InitTypeDef s_init_struct = {0};
+
+static CANQueue s_msg_queue = {0};
+static CANMessage s_received_msg = {0}; // the current message being processed.
 static bool s_init = false;
 
-CANWrapper_StatusTypeDef CANWrapper_Init(CAN_HandleTypeDef *hcan_ptr, uint8_t device_id, CANMessageCallback callback)
+CANWrapper_StatusTypeDef CANWrapper_Init(CANWrapper_InitTypeDef init_struct)
 {
-	if (!(device_id <= 0x3
-		&& callback != NULL
-		&& hcan_ptr != NULL))
+	if (!(init_struct.can_id <= 0x3
+		&& init_struct.message_callback != NULL
+		&& init_struct.hcan != NULL))
 	{
 		return CAN_WRAPPER_INVALID_ARGS;
 	}
-
-	s_device_id = device_id;
-	s_message_callback = callback;
-	s_received_msg = (CANMessage){0};
-	s_hcan_ptr = hcan_ptr;
 
 	const CAN_FilterTypeDef filter_config = {
 			.FilterIdHigh         = 0x0000,
@@ -61,23 +54,26 @@ CANWrapper_StatusTypeDef CANWrapper_Init(CAN_HandleTypeDef *hcan_ptr, uint8_t de
 			.SlaveStartFilterBank = 14,
 	};
 
-	if (HAL_CAN_ConfigFilter(hcan_ptr, &filter_config) != HAL_OK)
+	if (HAL_CAN_ConfigFilter(init_struct.hcan, &filter_config) != HAL_OK)
 	{
 		return CAN_WRAPPER_FAILED_TO_CONFIG_FILTER;
 	}
 
-	if (HAL_CAN_Start(hcan_ptr) != HAL_OK)
+	if (HAL_CAN_Start(init_struct.hcan) != HAL_OK)
 	{
 		return CAN_WRAPPER_FAILED_TO_START;
 	}
 
 	// enable CAN interrupt.
-	if (HAL_CAN_ActivateNotification(hcan_ptr, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+	if (HAL_CAN_ActivateNotification(init_struct.hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
 	{
 		return CAN_WRAPPER_FAILED_TO_ENABLE_INTERRUPT;
 	}
 
-	s_can_queue = CANQueue_Create();
+	s_msg_queue = CANQueue_Create();
+
+	s_init_struct = init_struct;
+	s_received_msg = (CANMessage){0};
 
 	s_init = true;
 	return CAN_WRAPPER_HAL_OK;
@@ -87,9 +83,9 @@ CANWrapper_StatusTypeDef CANWrapper_Poll_Messages()
 {
 	if (!s_init) return CAN_WRAPPER_NOT_INITIALISED;
 
-	if (CANQueue_Dequeue(&s_can_queue, &s_received_msg))
+	if (CANQueue_Dequeue(&s_msg_queue, &s_received_msg))
 	{
-		s_message_callback(s_received_msg);
+		s_init_struct.message_callback(s_received_msg);
 	}
 
 	return CAN_WRAPPER_HAL_OK;
@@ -103,7 +99,7 @@ CANWrapper_StatusTypeDef CANWrapper_Send_Message(CANMessage message)
 	CAN_TxHeaderTypeDef tx_header;
 
 	// TX message parameters.
-	uint16_t id = (message.priority << 4) | (s_device_id << 2) | (0x0F & message.recipient_id);
+	uint16_t id = (message.priority << 4) | (s_init_struct.can_id << 2) | (0x0F & message.recipient_id);
 
 	tx_header.StdId = id;
 	tx_header.IDE = CAN_ID_STD;
@@ -111,9 +107,9 @@ CANWrapper_StatusTypeDef CANWrapper_Send_Message(CANMessage message)
 	tx_header.DLC = CAN_MESSAGE_LENGTH;
 
 	// wait to send CAN message.
-	while (HAL_CAN_GetTxMailboxesFreeLevel(s_hcan_ptr) == 0){}
+	while (HAL_CAN_GetTxMailboxesFreeLevel(s_init_struct.hcan) == 0){}
 
-	return HAL_CAN_AddTxMessage(s_hcan_ptr, &tx_header, message.data, &tx_mailbox);
+	return HAL_CAN_AddTxMessage(s_init_struct.hcan, &tx_header, message.data, &tx_mailbox);
 }
 
 CANWrapper_StatusTypeDef CANWrapper_Send_Response(bool success, CANMessageBody msg_body)
@@ -123,6 +119,7 @@ CANWrapper_StatusTypeDef CANWrapper_Send_Response(bool success, CANMessageBody m
 	uint8_t ack_or_nack = success ? CMD_ACK : CMD_NACK;
 
     CANMessage msg = {
+    		.sender_id = s_init_struct.can_id,
     		.recipient_id = s_received_msg.sender_id,
 			.priority = s_received_msg.priority,
     		.command_id = ack_or_nack,
@@ -135,7 +132,7 @@ CANWrapper_StatusTypeDef CANWrapper_Send_Response(bool success, CANMessageBody m
 // called by HAL when a new CAN message is received and pending.
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan_ptr)
 {
-	if (hcan_ptr == s_hcan_ptr)
+	if (hcan_ptr == s_init_struct.hcan)
 	{
 		HAL_StatusTypeDef status;
 
@@ -149,12 +146,37 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan_ptr)
 
 		msg.recipient_id = RECIPIENT_ID_MASK & rx_header.StdId;
 
-		if (msg.recipient_id == s_device_id)
+		if (msg.recipient_id == s_init_struct.can_id)
 		{
 			msg.priority = rx_header.RTR == CAN_RTR_REMOTE ? 0x7F : rx_header.ExtId >> 24;
 			msg.sender_id = (SENDER_ID_MASK & rx_header.StdId) >> 2;
 
-			CANQueue_Enqueue(&s_can_queue, msg);
+			// send ACK.
+
+			CANQueue_Enqueue(&s_msg_queue, msg);
 		}
+	}
+}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+{
+	if (HAL_CAN_GetError(hcan) & HAL_CAN_ERROR_ACK)
+	{
+		// timed out.
+	}
+
+	if (HAL_CAN_GetError(hcan) & HAL_CAN_ERROR_EWG)
+	{
+		// error warning. (96 errors recorded from transmission or receipt)
+	}
+
+	if (HAL_CAN_GetError(hcan) & HAL_CAN_ERROR_EPV)
+	{
+		// entered error passive state. (more than 16 failed transmission attempts and/or 128 failed receipts)
+	}
+
+	if (HAL_CAN_GetError(hcan) & HAL_CAN_ERROR_BOF)
+	{
+		// entered bus-off state. (more than 32 failed transmission attempts)
 	}
 }

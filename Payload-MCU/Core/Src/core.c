@@ -40,16 +40,19 @@
 // [ ] Finish idle/active state logic.
 // [ ] Finish adding PUSH_ERROR calls next to LOG_ERROR calls.
 // [ ] Implement remaining commands.
+// [ ] Test changing interrupt intervals on the fly.
+// [ ] Possibly create wrapper around HAL I2C transmit/receive functions to
+//     improve clarity and possibly automatically push errors if they arise. (?)
 
-// Can ID's
+// CAN ID's
 #define DEVICE_ID 0x03 // this device.
 #define CDH_ID    0x01 // CDH.
 
-// Common commands.
+// common commands.
 #define CMD_SHUTDOWN 0x10 // TODO
 
 // Payload commands.
-#define CMD_RESET          0xA0 // TODO
+#define CMD_RESET          0xA0 // TODO: test.
 #define CMD_LED_ON         0xA1
 #define CMD_LED_OFF        0xA2
 #define CMD_HEATER_ON      0xA5
@@ -71,9 +74,9 @@ typedef enum {
 	ACTIVE
 } State;
 
-static State state = IDLE;
-static uint8_t temp_sequence = 0;
-static uint8_t light_sequence = 0;
+static State s_state = IDLE;
+static uint8_t s_temp_sequence = 0;
+static uint8_t s_light_sequence = 0;
 
 static ErrorBuffer s_error_buffer; // default error buffer.
 
@@ -90,7 +93,7 @@ void Core_Init()
 	bool success;
 	CANWrapper_StatusTypeDef cw_status;
 
-	state = IDLE;
+	s_state = IDLE;
 
 	LOG_INFO("Initialising Drivers...");
 
@@ -100,10 +103,16 @@ void Core_Init()
 	if (!success)
 	{
 		LOG_ERROR("failed to initialise IO Expander driver.");
-		PUSH_ERROR(ERROR_TCA9539_INIT);
+		PUSH_ERROR(ERROR_TCA9539_INIT); // TODO: rename to WRITE_ERROR?
 	}
 
-	cw_status = CANWrapper_Init(&hcan1, DEVICE_ID, &on_message_received);
+	CANWrapper_InitTypeDef cw_init = {
+			.hcan = &hcan1,
+			.can_id = DEVICE_ID,
+			.message_callback = &on_message_received
+	};
+
+	cw_status = CANWrapper_Init(cw_init);
 	if (cw_status != CAN_WRAPPER_HAL_OK)
 	{
 		LOG_ERROR("failed to initialise CAN wrapper.");
@@ -139,6 +148,9 @@ void Core_Halt()
 
 static void on_message_received(CANMessage msg)
 {
+	if (msg.command_id == CMD_ACK)
+		return;
+
 	ErrorBuffer cmd_error_buffer; // stores command errors.
 	ErrorContext_Push_Buffer(&cmd_error_buffer);
 
@@ -226,9 +238,9 @@ static void on_message_received(CANMessage msg)
 		}
 		case CMD_DATA_INTERVAL:
 		{
-			uint32_t period;
+			uint32_t period = 0;
 
-			period  = msg.data[1];
+			period |= msg.data[1];
 			period |= msg.data[2] << 8;
 			period |= msg.data[3] << 16;
 			period |= msg.data[4] << 24;
@@ -269,17 +281,28 @@ static void on_message_received(CANMessage msg)
 // callback for timers.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	ErrorBuffer error_buffer;
+
+	ErrorContext_Push_Buffer(&error_buffer);
+
 	if (htim->Instance == TIM2)
 	{
-		for (int i = WELL_0; i < WELL_15; i++)
+		for (int i = WELL_0; i <= WELL_15; i++)
 		{
 			report_well_temp_data(i);
 		}
-		for (int i = WELL_0; i < WELL_15; i++)
+		for (int i = WELL_0; i <= WELL_15; i++)
 		{
 			report_well_light_data(i);
 		}
 	}
+
+	if (ErrorBuffer_Has_Error(&error_buffer))
+	{
+		// TODO
+	}
+
+	ErrorContext_Pop_Buffer();
 }
 
 // function to get temperature data, package it and send it through CAN
@@ -300,7 +323,7 @@ static void report_well_temp_data(WellID well_id)
 			.command_id = CMD_REPORT_WELL_TEMP,
 			.body = {
 					.data = {
-						temp_sequence,
+						s_temp_sequence,
 						(uint8_t)well_id,
 						(uint8_t)(temp & 0x00FF),
 						(uint8_t)((temp & 0xFF00) >> 8)
@@ -308,7 +331,7 @@ static void report_well_temp_data(WellID well_id)
 			},
 	};
 
-	temp_sequence++;
+	s_temp_sequence++;
 
 	CANWrapper_Send_Message(msg);
 }
@@ -331,7 +354,7 @@ static void report_well_light_data(WellID well_id)
 			.command_id = CMD_REPORT_WELL_LIGHT,
 			.body = {
 					.data = {
-						light_sequence,
+						s_light_sequence,
 						(uint8_t)well_id,
 						(uint8_t)(light & 0x00FF),
 						(uint8_t)((light & 0xFF00) >> 8)
@@ -339,7 +362,7 @@ static void report_well_light_data(WellID well_id)
 			},
 	};
 
-	temp_sequence++;
+	s_light_sequence++;
 
 	CANWrapper_Send_Message(msg);
 }
@@ -347,7 +370,7 @@ static void report_well_light_data(WellID well_id)
 /*
  * @brief	reports errors to CDH if any.
  */
-static void report_errors()
+static void report_errors() // TODO: generalise this function to be used for other error buffers.
 {
 	if (ErrorBuffer_Has_Error(&s_error_buffer))
 	{

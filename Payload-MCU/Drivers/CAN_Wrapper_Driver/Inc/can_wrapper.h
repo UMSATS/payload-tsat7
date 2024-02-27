@@ -31,16 +31,31 @@ typedef enum {
 	CAN_WRAPPER_FAILED_TO_ENABLE_INTERRUPT,
 } CANWrapper_StatusTypeDef;
 
+typedef enum {
+	CAN_WRAPPER_TIMEOUT = 0,
+	CAN_WRAPPER_NACK,
+} CANWrapper_SendError;
+
 typedef void (*CANMessageCallback)(CANMessage);
+typedef void (*CANSendFailureCallback)(CANWrapper_SendError, CANMessage);
+
+typedef struct
+{
+	CAN_HandleTypeDef *hcan; // pointer to the HAL handle for CAN processing.
+	uint8_t can_id; // unique CAN ID for this device. (max value: 0x03)
+	CANMessageCallback message_callback; // called when a new message is polled.
+	CANSendFailureCallback send_failure_callback; // called when a message fails to send. (either due to timeout or NACK)
+} CANWrapper_InitTypeDef;
+
+#define CMD_ACK   0x01
+#define CMD_NACK  0x02
 
 /**
  * @brief				Performs necessary setup for normal functioning of CAN.
  *
- * @param hcan_ptr      Pointer to the HAL handle for CAN processing.
- * @param device_id		The unique CAN ID for this device. (max value: 0x03)
- * @param callback		Called when a new message is polled.
+ * @param init_struct   Configuration for initialisation.
  */
-CANWrapper_StatusTypeDef CANWrapper_Init(CAN_HandleTypeDef *hcan_ptr, uint8_t device_id, CANMessageCallback callback);
+CANWrapper_StatusTypeDef CANWrapper_Init(CANWrapper_InitTypeDef init_struct);
 
 /**
  * @brief               Polls the CAN queue for incoming messages. The callback
