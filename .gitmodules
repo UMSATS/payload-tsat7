@@ -1,0 +1,3 @@
+[submodule "Payload-MCU/Drivers/can-wrapper-module"]
+	path = Payload-MCU/Drivers/can-wrapper-module
+	url = https://github.com/UMSATS/can-wrapper-module
