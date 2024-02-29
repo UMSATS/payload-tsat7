@@ -32,6 +32,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define FLASH_MY_PAGE 128
+#define FLASH_MY_PAGE_ADDR (FLASH_MY_PAGE * 2048)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -89,6 +92,69 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  /*
+   * ===========================
+   * HOW TO USE
+   * GO TO WINDOW -> SHOW VIEW -> MEMORY BROWSER
+   * THEN ENTER ADDRESS 0x08040000
+   * THEN STEP THROUGH THE BREAKPOINTS AS NORMAL
+   * ===========================
+   */
+
+  // just a test struct
+  typedef struct dataStruct {
+		  uint32_t preamble;
+		  uint8_t testData1[16];
+		  uint8_t testData2[16];
+		  uint8_t testData3[16];
+		  uint32_t age;
+  } Flash_Data_Struct;
+
+  Flash_Data_Struct transmitDataStruct = {
+		  .preamble = 0xDEADBEEF,
+		  .testData1 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+		  .testData2 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+		  .testData3 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+		  .age = 0xAC
+  };
+
+  HAL_FLASH_Unlock();
+
+  Flash_Data_Struct* myDataStructAddr = &transmitDataStruct;
+  uint64_t* currentData;
+
+  // write 8 bytes (1 double-word) at a time until we exceed the size of the struct
+  for (int i = 0; i < sizeof(transmitDataStruct); i += 8) {
+	  currentData = (uint64_t*)((uint8_t*)myDataStructAddr + i);	// mamma mia
+	  HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, FLASH_MY_PAGE_ADDR + i, *currentData);
+  }
+
+
+
+  HAL_FLASH_Lock();
+
+  // Now to read it back in.
+
+  Flash_Data_Struct receiveDataStruct = *(Flash_Data_Struct*)FLASH_MY_PAGE_ADDR;
+
+  // Now to erase everything.
+
+  HAL_FLASH_Unlock();
+
+  // struct containing the flash erase settings - required
+  FLASH_EraseInitTypeDef erase_settings = {
+	  .TypeErase = FLASH_TYPEERASE_PAGES,
+	  .Banks = FLASH_BANK_1, 		// stm32l45x only has 1 flash bank
+	  .Page = FLASH_MY_PAGE,
+	  .NbPages = 1
+  };
+
+  uint32_t pageErrorCode;
+
+  HAL_FLASHEx_Erase(&erase_settings, &pageErrorCode);
+
+  HAL_FLASH_Lock();
 
   /* USER CODE END 2 */
 
