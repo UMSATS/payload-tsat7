@@ -31,28 +31,15 @@
 #include <well_id.h>
 #include "core.h"
 
-// TODO:
-// [ ] Setup timer for TCS.
-// [ ] Add TCS logic.
-// [ ] Add temperature formula.
-// [ ] Finish flash code.
-// [ ] Fix CAN not working with SOTI.
-// [ ] Finish idle/active state logic.
-// [ ] Finish adding PUSH_ERROR calls next to LOG_ERROR calls.
-// [ ] Implement remaining commands.
-// [ ] Test changing interrupt intervals on the fly.
-// [ ] Possibly create wrapper around HAL I2C transmit/receive functions to
-//     improve clarity and possibly automatically push errors if they arise. (?)
-
 // CAN ID's
 #define DEVICE_ID 0x03 // this device.
 #define CDH_ID    0x01 // CDH.
 
 // common commands.
-#define CMD_SHUTDOWN 0x10 // TODO
+#define CMD_SHUTDOWN 0x10
 
 // Payload commands.
-#define CMD_RESET          0xA0 // TODO: test.
+#define CMD_RESET          0xA0
 #define CMD_LED_ON         0xA1
 #define CMD_LED_OFF        0xA2
 #define CMD_HEATER_ON      0xA5
@@ -60,9 +47,9 @@
 #define CMD_GET_BOARD_TEMP 0xA7
 #define CMD_GET_WELL_LIGHT 0xA8
 #define CMD_GET_WELL_TEMP  0xA9
-#define CMD_DATA_INTERVAL  0xAA // TODO: test if functional.
-#define CMD_LED_TEST       0xAB // TODO
-#define CMD_GET_BASELINE   0xAC // TODO
+#define CMD_DATA_INTERVAL  0xAA
+#define CMD_LED_TEST       0xAB
+#define CMD_GET_BASELINE   0xAC
 
 // CDH commands
 #define CMD_REPORT_ERROR      0x51
@@ -81,6 +68,7 @@ static uint8_t s_light_sequence = 0;
 static ErrorBuffer s_error_buffer; // default error buffer.
 
 static void on_message_received(CANMessage msg);
+static void on_error_occured(CANWrapper_Error error);
 static void report_well_temp_data(WellID well_id);
 static void report_well_light_data(WellID well_id);
 static void report_errors();
@@ -107,9 +95,11 @@ void Core_Init()
 	}
 
 	CANWrapper_InitTypeDef cw_init = {
-			.hcan = &hcan1,
 			.can_id = DEVICE_ID,
-			.message_callback = &on_message_received
+			.hcan = &hcan1,
+			.htim = &htim16,
+			.message_callback = &on_message_received,
+			.error_callback = &on_error_occured
 	};
 
 	cw_status = CANWrapper_Init(cw_init);
@@ -173,29 +163,21 @@ static void on_message_received(CANMessage msg)
 		case CMD_LED_ON:
 		{
 			success = LEDs_Set_LED(msg.data[1], ON);
-			response_body.data[1] = msg.data[1];
-			response_data_size = 1;
 			break;
 		}
 		case CMD_LED_OFF:
 		{
 			success = LEDs_Set_LED(msg.data[1], OFF);
-			response_body.data[1] = msg.data[1];
-			response_data_size = 1;
 			break;
 		}
 		case CMD_HEATER_ON:
 		{
 			success = Heaters_Set_Heater(msg.data[1], ON);
-			response_body.data[1] = msg.data[1];
-			response_data_size = 1;
 			break;
 		}
 		case CMD_HEATER_OFF:
 		{
 			success = Heaters_Set_Heater(msg.data[1], OFF);
-			response_body.data[1] = msg.data[1];
-			response_data_size = 1;
 			break;
 		}
 		case CMD_GET_BOARD_TEMP:
@@ -278,6 +260,23 @@ static void on_message_received(CANMessage msg)
 	ErrorContext_Pop_Buffer();
 }
 
+static void on_error_occured(CANWrapper_Error error)
+{
+	switch (error.error_code)
+	{
+		case CAN_WRAPPER_TIMEOUT:
+		{
+			// your transmission attempt timed out.
+			// Here you can resolve the issue as appropriate.
+
+			// You can re-send the message to the intended recipient like so.
+			CANWrapper_Transmit(error.recipient, &error.msg);
+
+			break;
+		}
+	}
+}
+
 // callback for timers.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -285,7 +284,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	ErrorContext_Push_Buffer(&error_buffer);
 
-	if (htim->Instance == TIM2)
+	if (htim == &htim2)
 	{
 		for (int i = WELL_0; i <= WELL_15; i++)
 		{
@@ -304,6 +303,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	ErrorContext_Pop_Buffer();
 }
+
+
 
 // function to get temperature data, package it and send it through CAN
 static void report_well_temp_data(WellID well_id)
