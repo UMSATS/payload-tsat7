@@ -31,31 +31,6 @@
 #include <well_id.h>
 #include "core.h"
 
-// CAN ID's
-#define DEVICE_ID 0x03 // this device.
-#define CDH_ID    0x01 // CDH.
-
-// common commands.
-#define CMD_SHUTDOWN 0x10
-
-// Payload commands.
-#define CMD_RESET          0xA0
-#define CMD_LED_ON         0xA1
-#define CMD_LED_OFF        0xA2
-#define CMD_HEATER_ON      0xA5
-#define CMD_HEATER_OFF     0xA6
-#define CMD_GET_BOARD_TEMP 0xA7
-#define CMD_GET_WELL_LIGHT 0xA8
-#define CMD_GET_WELL_TEMP  0xA9
-#define CMD_DATA_INTERVAL  0xAA
-#define CMD_LED_TEST       0xAB
-#define CMD_GET_BASELINE   0xAC
-
-// CDH commands
-#define CMD_REPORT_ERROR      0x51
-#define CMD_REPORT_WELL_LIGHT 0x33
-#define CMD_REPORT_WELL_TEMP  0x34
-
 typedef enum {
 	IDLE = 0,
 	ACTIVE
@@ -67,8 +42,8 @@ static uint8_t s_light_sequence = 0;
 
 static ErrorBuffer s_error_buffer; // default error buffer.
 
-static void on_message_received(CANMessage msg);
-static void on_error_occured(CANWrapper_Error error);
+static void on_message_received(CANMessage msg, NodeID sender, bool is_ack);
+static void on_error_occured(CANWrapper_ErrorInfo error);
 static void report_well_temp_data(WellID well_id);
 static void report_well_light_data(WellID well_id);
 static void report_errors();
@@ -95,7 +70,7 @@ void Core_Init()
 	}
 
 	CANWrapper_InitTypeDef cw_init = {
-			.can_id = DEVICE_ID,
+			.node_id = NODE_PAYLOAD,
 			.hcan = &hcan1,
 			.htim = &htim16,
 			.message_callback = &on_message_received,
@@ -136,16 +111,11 @@ void Core_Halt()
 	while (1) {}
 }
 
-static void on_message_received(CANMessage msg)
+static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 {
-	if (msg.command_id == CMD_ACK)
-		return;
-
 	ErrorBuffer cmd_error_buffer; // stores command errors.
 	ErrorContext_Push_Buffer(&cmd_error_buffer);
-
-	CANMessageBody response_body = { .data = { msg.command_id } };
-
+/*
 	// the reset command is a special case.
 	if (msg.command_id == CMD_RESET)
 	{
@@ -154,32 +124,36 @@ static void on_message_received(CANMessage msg)
 		Core_Halt(); // wait for the hard reset.
 		return;
 	}
-
+*/
 	bool success = false;
-	uint8_t response_data_size = 0;
 
-	switch (msg.command_id)
+	switch (msg.cmd)
 	{
-		case CMD_LED_ON:
-		{
-			success = LEDs_Set_LED(msg.data[1], ON);
-			break;
-		}
-		case CMD_LED_OFF:
-		{
-			success = LEDs_Set_LED(msg.data[1], OFF);
-			break;
-		}
-		case CMD_HEATER_ON:
-		{
-			success = Heaters_Set_Heater(msg.data[1], ON);
-			break;
-		}
-		case CMD_HEATER_OFF:
-		{
-			success = Heaters_Set_Heater(msg.data[1], OFF);
-			break;
-		}
+	case CMD_RESET:
+	{
+
+	}
+	case CMD_PLD_SET_WELL_LED:
+	{
+		success = LEDs_Set_LED(msg.data[1], ON);
+		break;
+	}/*
+	case CMD_LED_OFF:
+	{
+		success = LEDs_Set_LED(msg.data[1], OFF);
+		break;
+	}
+	case CMD_HEATER_ON:
+	{
+		success = Heaters_Set_Heater(msg.data[1], ON);
+		break;
+	}
+	case CMD_HEATER_OFF:
+	{
+		success = Heaters_Set_Heater(msg.data[1], OFF);
+		break;
+	}*/
+		/*
 		case CMD_GET_BOARD_TEMP:
 		{
 			uint16_t temp;
@@ -233,14 +207,15 @@ static void on_message_received(CANMessage msg)
 			success = true;
 			break;
 		}
+		*/
 		default:
 		{
-			LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
-			PUSH_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
+			//LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
+			//PUSH_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
 			break;
 		}
 	}
-
+/*
 	if (ErrorBuffer_Has_Error(&cmd_error_buffer))
 	{
 		success = false;
@@ -254,23 +229,23 @@ static void on_message_received(CANMessage msg)
 
 		memcpy(response_body.data + 1 + response_data_size, cmd_error_buffer.data, bytes_to_copy);
 	}
-
-	CANWrapper_Send_Response(success, response_body);
+*/
+	//CANWrapper_Send_Response(success, response_body);
 
 	ErrorContext_Pop_Buffer();
 }
 
-static void on_error_occured(CANWrapper_Error error)
+static void on_error_occured(CANWrapper_ErrorInfo error)
 {
-	switch (error.error_code)
+	switch (error.error)
 	{
-		case CAN_WRAPPER_TIMEOUT:
+		case CAN_WRAPPER_ERROR_TIMEOUT:
 		{
 			// your transmission attempt timed out.
 			// Here you can resolve the issue as appropriate.
 
 			// You can re-send the message to the intended recipient like so.
-			CANWrapper_Transmit(error.recipient, &error.msg);
+			//CANWrapper_Transmit(error.recipient, &error.msg);
 
 			break;
 		}
@@ -308,7 +283,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 // function to get temperature data, package it and send it through CAN
 static void report_well_temp_data(WellID well_id)
-{
+{/*
 	uint16_t temp;
 	bool success = Thermistors_Get_Temp(well_id, &temp);
 
@@ -334,12 +309,12 @@ static void report_well_temp_data(WellID well_id)
 
 	s_temp_sequence++;
 
-	CANWrapper_Send_Message(msg);
+	CANWrapper_Send_Message(msg);*/
 }
 
 // function to get light level data, package it and send it through CAN
 static void report_well_light_data(WellID well_id)
-{
+{/*
 	uint16_t light;
 	bool success = Photocells_Get_Light_Level(well_id, &light);
 
@@ -365,14 +340,14 @@ static void report_well_light_data(WellID well_id)
 
 	s_light_sequence++;
 
-	CANWrapper_Send_Message(msg);
+	CANWrapper_Send_Message(msg);*/
 }
 
 /*
  * @brief	reports errors to CDH if any.
  */
 static void report_errors() // TODO: generalise this function to be used for other error buffers.
-{
+{/*
 	if (ErrorBuffer_Has_Error(&s_error_buffer))
 	{
 		ssize_t body_length = s_error_buffer.size;
@@ -394,7 +369,7 @@ static void report_errors() // TODO: generalise this function to be used for oth
 		CANWrapper_Send_Message(msg);
 
 		ErrorBuffer_Clear(&s_error_buffer);
-	}
+	}*/
 }
 
 static void print_well_info()
