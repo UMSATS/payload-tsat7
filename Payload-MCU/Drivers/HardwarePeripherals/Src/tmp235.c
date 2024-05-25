@@ -7,9 +7,9 @@
 
 #include "tmp235.h"
 #include "assert.h"
-#include "log.h"
 #include "adc.h"
-#include "error_context.h"
+#include "tuk/log.h"
+#include "tuk/error_context.h"
 
 #include <stdint.h>
 #include <stdbool.h>

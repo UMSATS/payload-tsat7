@@ -6,12 +6,11 @@
  */
 
 #include <can.h>
-#include <util/can_wrapper.h>
 #include <cmsis_gcc.h>
-#include <error_context.h>
+#include <tuk/error_context.h>
 #include <heaters.h>
 #include <leds.h>
-#include <log.h>
+#include <tuk/log.h>
 #include <max6822.h>
 #include <photocells.h>
 #include <power.h>
@@ -27,6 +26,7 @@
 #include <thermistors.h>
 #include <tim.h>
 #include <tmp235.h>
+#include <tuk/can_wrapper.h>
 #include <well_id.h>
 #include "core.h"
 
@@ -65,7 +65,7 @@ void Core_Init()
 	if (!success)
 	{
 		LOG_ERROR("failed to initialise IO Expander driver.");
-		PUSH_ERROR(ERROR_TCA9539_INIT); // TODO: rename to WRITE_ERROR?
+		PUSH_ERROR(ERROR_PLD_TCA9539_INIT); // TODO: rename to WRITE_ERROR?
 	}
 
 	CANWrapper_InitTypeDef cw_init = {

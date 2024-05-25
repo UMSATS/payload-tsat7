@@ -8,9 +8,9 @@
  */
 
 #include "tca9548.h"
-#include "log.h"
 #include "assert.h"
-#include "error_context.h"
+#include "tuk/log.h"
+#include "tuk/error_context.h"
 
 #include "i2c.h"
 
@@ -29,7 +29,7 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 	if (channel < MUX_CHANNEL_0 || channel > MUX_CHANNEL_5)
 	{
 		LOG_ERROR("invalid mux channel: %d.", channel);
-		PUSH_ERROR(ERROR_TCA9548_INVALID_CHANNEL);
+		PUSH_ERROR(ERROR_PLD_TCA9548_INVALID_CHANNEL);
 		return false;
 	}
 

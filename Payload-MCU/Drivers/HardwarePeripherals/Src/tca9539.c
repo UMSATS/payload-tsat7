@@ -10,9 +10,9 @@
 #include "tca9539.h"
 #include "power.h"
 #include "assert.h"
-#include "log.h"
 #include "i2c.h"
-#include "error_context.h"
+#include "tuk/log.h"
+#include "tuk/error_context.h"
 
 static const uint32_t TIMEOUT = 100;
 
@@ -199,14 +199,14 @@ static bool check_params(ExpanderID device, ExpanderPinID pin)
 	if (device != EXPANDER_1 && device != EXPANDER_2)
 	{
 		LOG_ERROR("invalid device: %d.", device);
-		PUSH_ERROR(ERROR_TCA9539_INVALID_EXPANDER_ID);
+		PUSH_ERROR(ERROR_PLD_TCA9539_INVALID_EXPANDER_ID);
 		return false;
 	}
 
 	if (pin < EXPANDER_PIN_0 || pin > EXPANDER_PIN_17)
 	{
 		LOG_ERROR("invalid pin: %d.", pin);
-		PUSH_ERROR(ERROR_TCA9539_INVALID_EXPANDER_PIN_ID);
+		PUSH_ERROR(ERROR_PLD_TCA9539_INVALID_EXPANDER_PIN_ID);
 		return false;
 	}
 

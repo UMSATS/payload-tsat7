@@ -27,7 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "core.h"
-#include "log.h"
+#include "tuk/log.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
