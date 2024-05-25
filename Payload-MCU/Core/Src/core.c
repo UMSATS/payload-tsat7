@@ -6,8 +6,7 @@
  */
 
 #include <can.h>
-#include <can_message.h>
-#include <can_wrapper.h>
+#include <util/can_wrapper.h>
 #include <cmsis_gcc.h>
 #include <error_context.h>
 #include <heaters.h>
