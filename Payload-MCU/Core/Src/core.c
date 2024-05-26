@@ -7,7 +7,7 @@
 
 #include <can.h>
 #include <cmsis_gcc.h>
-#include <tuk/error_context.h>
+#include <tuk/error_tracker.h>
 #include <heaters.h>
 #include <leds.h>
 #include <tuk/log.h>
@@ -59,13 +59,13 @@ void Core_Init()
 
 	LOG_INFO("Initialising Drivers...");
 
-	ErrorContext_Init(&s_error_buffer);
+	ErrorTracker_Init(&s_error_buffer);
 
 	success = TCA9539_Init();
 	if (!success)
 	{
 		LOG_ERROR("failed to initialise IO Expander driver.");
-		PUSH_ERROR(ERROR_PLD_TCA9539_INIT); // TODO: rename to WRITE_ERROR?
+		PUT_ERROR(ERROR_PLD_TCA9539_INIT);
 	}
 
 	CANWrapper_InitTypeDef cw_init = {
@@ -80,7 +80,7 @@ void Core_Init()
 	if (cw_status != CAN_WRAPPER_HAL_OK)
 	{
 		LOG_ERROR("failed to initialise CAN wrapper.");
-		PUSH_ERROR(ERROR_CAN_WRAPPER_INIT, cw_status);
+		PUT_ERROR(ERROR_CAN_WRAPPER_INIT, cw_status);
 	}
 	else
 	{
@@ -113,7 +113,7 @@ void Core_Halt()
 static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 {
 	ErrorBuffer cmd_error_buffer; // stores command errors.
-	ErrorContext_Push_Buffer(&cmd_error_buffer);
+	ErrorTracker_Push_Buffer(&cmd_error_buffer);
 /*
 	// the reset command is a special case.
 	if (msg.command_id == CMD_RESET)
@@ -210,7 +210,7 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 		default:
 		{
 			//LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
-			//PUSH_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
+			//PUT_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
 			break;
 		}
 	}
@@ -231,7 +231,7 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 */
 	//CANWrapper_Send_Response(success, response_body);
 
-	ErrorContext_Pop_Buffer();
+	ErrorTracker_Pop_Buffer();
 }
 
 static void on_error_occured(CANWrapper_ErrorInfo error)
@@ -256,7 +256,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	ErrorBuffer error_buffer;
 
-	ErrorContext_Push_Buffer(&error_buffer);
+	ErrorTracker_Push_Buffer(&error_buffer);
 
 	if (htim == &htim2)
 	{
@@ -275,7 +275,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		// TODO
 	}
 
-	ErrorContext_Pop_Buffer();
+	ErrorTracker_Pop_Buffer();
 }
 
 

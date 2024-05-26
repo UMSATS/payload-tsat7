@@ -54,14 +54,14 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
-		PUSH_ERROR(ERROR_PLD_INVALID_WELL_ID);
+		PUT_ERROR(ERROR_PLD_INVALID_WELL_ID);
 		return false;
 	}
 
 	if (!TCA9548_Set_I2C_Channel(ADC_LOCATIONS[well_id].channel))
 	{
 		LOG_ERROR("failed to read temperature in well %d: could not switch channel.", well_id);
-		PUSH_ERROR(ERROR_PLD_TCA9548_SET_CHANNEL);
+		PUT_ERROR(ERROR_PLD_TCA9548_SET_CHANNEL);
 		return false;
 	}
 
@@ -73,7 +73,7 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to read temperature in well %d. (HAL error code: %d)", well_id, status);
-		PUSH_ERROR(ERROR_I2C_RECEIVE, status);
+		PUT_ERROR(ERROR_I2C_RECEIVE, status);
 		return false;
 	}
 

@@ -9,7 +9,7 @@
 #include "assert.h"
 #include "adc.h"
 #include "tuk/log.h"
-#include "tuk/error_context.h"
+#include "tuk/error_tracker.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -26,7 +26,7 @@ bool TMP235_Read_Temp(uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to calibrate. (HAL error code: %d)", status);
-		PUSH_ERROR(ERROR_ADC_CALIBRATION_START, status);
+		PUT_ERROR(ERROR_ADC_CALIBRATION_START, status);
 		return false;
 	}
 
@@ -35,7 +35,7 @@ bool TMP235_Read_Temp(uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to start conversion. (HAL error code: %d)", status);
-		PUSH_ERROR(ERROR_ADC_START, status);
+		PUT_ERROR(ERROR_ADC_START, status);
 		return false;
 	}
 
@@ -43,7 +43,7 @@ bool TMP235_Read_Temp(uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to complete conversion. (HAL error code: %d)", status);
-		PUSH_ERROR(ERROR_ADC_POLL, status);
+		PUT_ERROR(ERROR_ADC_POLL, status);
 		return false;
 	}
 
@@ -54,7 +54,7 @@ bool TMP235_Read_Temp(uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to complete conversion. (HAL error code: %d)", status);
-		PUSH_ERROR(ERROR_ADC_GET_VALUE, status);
+		PUT_ERROR(ERROR_ADC_GET_VALUE, status);
 		return false;
 	}
 

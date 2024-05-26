@@ -7,7 +7,7 @@
 
 #include "main.h"
 #include "power.h"
-#include "tuk/error_context.h"
+#include "tuk/error_tracker.h"
 
 #include <stdint.h>
 #include <stdbool.h>
