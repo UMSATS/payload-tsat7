@@ -9,10 +9,8 @@
 #include "well_id.h"
 #include "mux_adc_location.h"
 #include "tca9548.h"
-#include "utils.h"
 #include "assert.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
+#include "tuk/tuk.h"
 
 #include "i2c.h"
 
@@ -73,7 +71,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 		return false;
 	}
 
-	uint16_t light = utils_be_to_native_16(data); // convert from BE to LE.
+	uint16_t light = BE_To_Native_16(data); // convert from BE to LE.
 
 	*out = light;
 

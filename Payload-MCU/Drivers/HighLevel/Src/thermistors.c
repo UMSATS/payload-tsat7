@@ -9,7 +9,6 @@
 #include "well_id.h"
 #include "mux_adc_location.h"
 #include "tca9548.h"
-#include "utils.h"
 #include "assert.h"
 #include "tuk/tuk.h"
 
@@ -77,7 +76,7 @@ bool Thermistors_Get_Temp(WellID well_id, uint16_t *out)
 		return false;
 	}
 
-	uint16_t temp = utils_be_to_native_16(data); // convert from BE to LE.
+	uint16_t temp = BE_To_Native_16(data); // convert from BE to LE.
 
 	*out = temp;
 
