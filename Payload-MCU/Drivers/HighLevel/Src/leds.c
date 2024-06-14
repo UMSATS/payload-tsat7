@@ -9,7 +9,7 @@
 #include "well_id.h"
 #include "tca9539.h"
 #include "expander_pin_location.h"
-#include "tuk/log.h"
+#include "tuk/debug/log.h"
 #include "tuk/error_tracker.h"
 
 #include <stdbool.h>
@@ -42,7 +42,7 @@ bool LEDs_Set_LED(WellID well_id, Power power)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
-		PUT_ERROR(ERROR_PLD_INVALID_WELL_ID);
+		PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -52,7 +52,7 @@ bool LEDs_Set_LED(WellID well_id, Power power)
 	if (!success)
 	{
 		LOG_ERROR("failed to set LED %d to %s", well_id, power ? "ON" : "OFF");
-		PUT_ERROR(ERROR_PLD_TCA9539_SET_PIN);
+		PUT_ERROR(ERR_PLD_TCA9539_SET_PIN);
 	}
 
 	return success;

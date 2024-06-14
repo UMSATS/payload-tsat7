@@ -9,7 +9,7 @@
 
 #include "tca9548.h"
 #include "assert.h"
-#include "tuk/log.h"
+#include "tuk/debug/log.h"
 #include "tuk/error_tracker.h"
 
 #include "i2c.h"
@@ -29,7 +29,7 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 	if (channel < MUX_CHANNEL_0 || channel > MUX_CHANNEL_5)
 	{
 		LOG_ERROR("invalid mux channel: %d.", channel);
-		PUT_ERROR(ERROR_PLD_TCA9548_INVALID_CHANNEL);
+		PUT_ERROR(ERR_PLD_TCA9548_INVALID_CHANNEL);
 		return false;
 	}
 
@@ -42,7 +42,7 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to switch to I2C channel %d. (HAL error code: %d)", channel, status);
-		PUT_ERROR(ERROR_I2C_TRANSMIT, status);
+		PUT_ERROR(ERR_I2C_TRANSMIT, status);
 		return false;
 	}
 

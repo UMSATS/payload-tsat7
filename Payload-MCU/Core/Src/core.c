@@ -10,7 +10,7 @@
 #include <tuk/error_tracker.h>
 #include <heaters.h>
 #include <leds.h>
-#include <tuk/log.h>
+#include <tuk/debug/log.h>
 #include <max6822.h>
 #include <photocells.h>
 #include <power.h>
@@ -65,7 +65,7 @@ void Core_Init()
 	if (!success)
 	{
 		LOG_ERROR("failed to initialise IO Expander driver.");
-		PUT_ERROR(ERROR_PLD_TCA9539_INIT);
+		PUT_ERROR(ERR_PLD_TCA9539_INIT);
 	}
 
 	CANWrapper_InitTypeDef cw_init = {
@@ -80,7 +80,7 @@ void Core_Init()
 	if (cw_status != CAN_WRAPPER_HAL_OK)
 	{
 		LOG_ERROR("failed to initialise CAN wrapper.");
-		PUT_ERROR(ERROR_CAN_WRAPPER_INIT, cw_status);
+		PUT_ERROR(ERR_CAN_WRAPPER_INIT, cw_status);
 	}
 	else
 	{
@@ -94,7 +94,7 @@ void Core_Update()
 {
 	MAX6822_Reset_Timer();
 
-	CANWrapper_Poll_Messages();
+	CANWrapper_Poll_Events();
 
 	report_errors();
 }
@@ -114,122 +114,110 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 {
 	ErrorBuffer cmd_error_buffer; // stores command errors.
 	ErrorTracker_Push_Buffer(&cmd_error_buffer);
-/*
-	// the reset command is a special case.
-	if (msg.command_id == CMD_RESET)
-	{
-		CANWrapper_Send_Response(true, response_body);
-		MAX6822_Manual_Reset();
-		Core_Halt(); // wait for the hard reset.
-		return;
-	}
-*/
+
 	bool success = false;
 
 	switch (msg.cmd)
 	{
 	case CMD_RESET:
 	{
-
+		// trigger a hardware reset.
+		MAX6822_Manual_Reset();
+		Core_Halt(); // wait for the reset.
+		break;
 	}
 	case CMD_PLD_SET_WELL_LED:
 	{
-		success = LEDs_Set_LED(msg.data[1], ON);
-		break;
-	}/*
-	case CMD_LED_OFF:
-	{
-		success = LEDs_Set_LED(msg.data[1], OFF);
+		uint8_t well_id, power;
+		GET_ARG(msg, 0, well_id);
+		GET_ARG(msg, 1, power);
+		success = LEDs_Set_LED(well_id, power);
 		break;
 	}
-	case CMD_HEATER_ON:
+	case CMD_PLD_SET_WELL_HEATER:
 	{
-		success = Heaters_Set_Heater(msg.data[1], ON);
+		uint8_t well_id, power;
+		GET_ARG(msg, 0, well_id);
+		GET_ARG(msg, 1, power);
+		success = Heaters_Set_Heater(well_id, power);
 		break;
 	}
-	case CMD_HEATER_OFF:
+	case CMD_PLD_SET_WELL_TEMP:
 	{
-		success = Heaters_Set_Heater(msg.data[1], OFF);
+		uint8_t well_id;
+		float temp;
+		GET_ARG(msg, 0, well_id);
+		GET_ARG(msg, 1, temp);
+
+		// TODO: update the target temperature of one of the wells in the TCS.
 		break;
-	}*/
-		/*
-		case CMD_GET_BOARD_TEMP:
-		{
-			uint16_t temp;
-			success = TMP235_Read_Temp(&temp);
-			if (success)
-			{
-				response_body.data[1] = (uint8_t)(temp & 0x00FF);
-				response_body.data[2] = (uint8_t)(temp & 0xFF00 >> 8);
-				response_data_size = 2;
-			}
-			break;
-		}
-		case CMD_GET_WELL_LIGHT:
-		{
-			uint16_t light;
-			success = Photocells_Get_Light_Level(msg.data[1], &light);
-			if (success)
-			{
-				response_body.data[1] = msg.data[1];
-				response_body.data[2] = (uint8_t)(light & 0x00FF);
-				response_body.data[3] = (uint8_t)(light & 0xFF00 >> 8);
-				response_data_size = 3;
-			}
-			break;
-		}
-		case CMD_GET_WELL_TEMP:
-		{
-			uint16_t temp;
-			success = Thermistors_Get_Temp(msg.data[1], &temp);
-			if (success)
-			{
-				response_body.data[1] = msg.data[1];
-				response_body.data[2] = (uint8_t)(temp & 0x00FF);
-				response_body.data[3] = (uint8_t)(temp & 0xFF00 >> 8);
-				response_data_size = 3;
-			}
-			break;
-		}
-		case CMD_DATA_INTERVAL:
-		{
-			uint32_t period = 0;
-
-			period |= msg.data[1];
-			period |= msg.data[2] << 8;
-			period |= msg.data[3] << 16;
-			period |= msg.data[4] << 24;
-
-			// set interrupt timer period.
-			__HAL_TIM_SET_AUTORELOAD(&htim2, period);
-
-			success = true;
-			break;
-		}
-		*/
-		default:
-		{
-			//LOG_ERROR("unknown command: 0x%02X.", msg.command_id);
-			//PUT_ERROR(ERROR_UNKNOWN_COMMAND, (uint8_t)msg.command_id);
-			break;
-		}
 	}
-/*
+	case CMD_PLD_GET_WELL_LIGHT:
+	{
+		uint8_t well_id;
+		GET_ARG(msg, 0, well_id);
+
+		uint16_t light;
+		success = Photocells_Get_Light_Level(well_id, &light);
+		if (success)
+		{
+			CANMessage response;
+			response.cmd = CMD_CDH_PROCESS_WELL_LIGHT;
+			SET_ARG(response, 0, light);
+			CANWrapper_Transmit(NODE_CDH, &response);
+		}
+		break;
+	}
+	case CMD_PLD_GET_WELL_TEMP:
+	{
+		uint8_t well_id;
+		GET_ARG(msg, 0, well_id);
+
+		uint16_t temp;
+		success = Thermistors_Get_Temp(well_id, &temp);
+		if (success)
+		{
+			CANMessage response;
+			response.cmd = CMD_CDH_PROCESS_WELL_TEMP;
+			SET_ARG(response, 0, temp);
+			CANWrapper_Transmit(NODE_CDH, &response);
+		}
+		break;
+	}
+	case CMD_PLD_SET_TELEMETRY_INTERVAL:
+	{
+		uint32_t period;
+		GET_ARG(msg, 0, period);
+
+		// set interrupt timer period.
+		__HAL_TIM_SET_AUTORELOAD(&htim2, period);
+
+		success = true;
+		break;
+	}
+	case CMD_PLD_TEST_LEDS:
+	{
+		// TODO
+		break;
+	}
+	default:
+	{
+		LOG_ERROR("unknown command: 0x%02X.", msg.cmd);
+		PUT_ERROR(ERR_UNKNOWN_COMMAND, (uint8_t)msg.cmd);
+		break;
+	}
+	}
+
 	if (ErrorBuffer_Has_Error(&cmd_error_buffer))
 	{
 		success = false;
 
-		// copy error data to the end of the response.
+		CANMessage error_report;
+		error_report.cmd = CMD_CDH_PROCESS_ERROR;
+		SET_ARG(error_report, 0, cmd_error_buffer);
 
-		size_t bytes_left = CAN_MESSAGE_LENGTH - 1 - response_data_size;
-		size_t bytes_to_copy = cmd_error_buffer.size;
-		if (bytes_to_copy > bytes_left)
-			bytes_to_copy = bytes_left;
-
-		memcpy(response_body.data + 1 + response_data_size, cmd_error_buffer.data, bytes_to_copy);
+		CANWrapper_Transmit(NODE_CDH, &error_report);
 	}
-*/
-	//CANWrapper_Send_Response(success, response_body);
 
 	ErrorTracker_Pop_Buffer();
 }
@@ -245,6 +233,8 @@ static void on_error_occured(CANWrapper_ErrorInfo error)
 
 			// You can re-send the message to the intended recipient like so.
 			//CANWrapper_Transmit(error.recipient, &error.msg);
+
+			// TODO
 
 			break;
 		}

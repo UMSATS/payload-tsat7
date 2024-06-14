@@ -11,7 +11,7 @@
 #include "tca9548.h"
 #include "utils.h"
 #include "assert.h"
-#include "tuk/log.h"
+#include "tuk/debug/log.h"
 #include "tuk/error_tracker.h"
 
 #include "i2c.h"
@@ -49,7 +49,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
 		LOG_ERROR("invalid well id: %d.", well_id);
-		PUT_ERROR(ERROR_PLD_INVALID_WELL_ID);
+		PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -57,7 +57,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (!success)
 	{
 		LOG_ERROR("failed to read light level in well %d: could not switch channel.", well_id);
-		PUT_ERROR(ERROR_PLD_TCA9548_SET_CHANNEL);
+		PUT_ERROR(ERR_PLD_TCA9548_SET_CHANNEL);
 		return false;
 	}
 
@@ -69,7 +69,7 @@ bool Photocells_Get_Light_Level(WellID well_id, uint16_t *out)
 	if (status != HAL_OK)
 	{
 		LOG_ERROR("failed to read light level in well %d. (HAL error code: %d)", well_id, status);
-		PUT_ERROR(ERROR_I2C_RECEIVE, status);
+		PUT_ERROR(ERR_I2C_RECEIVE, status);
 		return false;
 	}
 
