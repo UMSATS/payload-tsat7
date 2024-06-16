@@ -7,10 +7,8 @@
 
 #include <can.h>
 #include <cmsis_gcc.h>
-#include <tuk/error_tracker.h>
 #include <heaters.h>
 #include <leds.h>
-#include <tuk/debug/log.h>
 #include <max6822.h>
 #include <photocells.h>
 #include <power.h>
@@ -26,9 +24,9 @@
 #include <thermistors.h>
 #include <tim.h>
 #include <tmp235.h>
-#include <tuk/can_wrapper.h>
 #include <well_id.h>
 #include "core.h"
+#include "tuk/tuk.h"
 
 typedef enum {
 	IDLE = 0,
@@ -45,7 +43,7 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack);
 static void on_error_occured(CANWrapper_ErrorInfo error);
 static void report_well_temp_data(WellID well_id);
 static void report_well_light_data(WellID well_id);
-static void report_errors();
+static void process_errors(ErrorBuffer *p_error_buffer);
 static void print_well_info();
 
 #define LOG_SUBJECT "Core"
@@ -87,7 +85,10 @@ void Core_Init()
 		// TODO: disable CAN in this case?
 	}
 
-	report_errors();
+	if (ErrorBuffer_Has_Error(&s_error_buffer))
+	{
+		process_errors(&s_error_buffer);
+	}
 }
 
 void Core_Update()
@@ -96,7 +97,10 @@ void Core_Update()
 
 	CANWrapper_Poll_Events();
 
-	report_errors();
+	if (ErrorBuffer_Has_Error(&s_error_buffer))
+	{
+		process_errors(&s_error_buffer);
+	}
 }
 
 void Core_Halt()
@@ -210,13 +214,8 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 
 	if (ErrorBuffer_Has_Error(&cmd_error_buffer))
 	{
-		success = false;
-
-		CANMessage error_report;
-		error_report.cmd = CMD_CDH_PROCESS_ERROR;
-		SET_ARG(error_report, 0, cmd_error_buffer);
-
-		CANWrapper_Transmit(NODE_CDH, &error_report);
+		success = false; // FIXME: either do something with this variable or remove it.
+		process_errors(&cmd_error_buffer);
 	}
 
 	ErrorTracker_Pop_Buffer();
@@ -233,6 +232,17 @@ static void on_error_occured(CANWrapper_ErrorInfo error)
 
 			// You can re-send the message to the intended recipient like so.
 			//CANWrapper_Transmit(error.recipient, &error.msg);
+
+			// TODO
+
+			break;
+		}
+		case CAN_WRAPPER_ERROR_CAN_TIMEOUT:
+		{
+			// This is a lower-level type of error that occurs when there is a
+			// likely more serious issue with CAN communications. Your message
+			// wasn't acknowledged by *any* of the other nodes in the network.
+			// This *might* indicate your CAN connection is defective.
 
 			// TODO
 
@@ -260,10 +270,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 
-	if (ErrorBuffer_Has_Error(&error_buffer))
-	{
-		// TODO
-	}
+	process_errors(&error_buffer);
 
 	ErrorTracker_Pop_Buffer();
 }
@@ -272,93 +279,62 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 // function to get temperature data, package it and send it through CAN
 static void report_well_temp_data(WellID well_id)
-{/*
+{
 	uint16_t temp;
 	bool success = Thermistors_Get_Temp(well_id, &temp);
 
 	if (!success)
 	{
 		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
+		// TODO: Add PUT_ERROR?
 		return;
 	}
 
-	CANMessage msg = {
-			.recipient_id = CDH_ID,
-			.priority = 3,
-			.command_id = CMD_REPORT_WELL_TEMP,
-			.body = {
-					.data = {
-						s_temp_sequence,
-						(uint8_t)well_id,
-						(uint8_t)(temp & 0x00FF),
-						(uint8_t)((temp & 0xFF00) >> 8)
-					}
-			},
-	};
+	CANMessage msg;
+	msg.cmd = CMD_CDH_PROCESS_WELL_TEMP;
+	SET_ARG(msg, 0, (uint8_t)well_id); // FIXME: at some point should make well ID's uint8_t's by default. This is too easy to mess up.
+	SET_ARG(msg, 1, temp);
 
-	s_temp_sequence++;
+	s_temp_sequence++; // TODO: unused.
 
-	CANWrapper_Send_Message(msg);*/
+	CANWrapper_Transmit(NODE_CDH, &msg);
 }
 
 // function to get light level data, package it and send it through CAN
 static void report_well_light_data(WellID well_id)
-{/*
+{
 	uint16_t light;
 	bool success = Photocells_Get_Light_Level(well_id, &light);
 
 	if (!success)
 	{
 		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
+		// TODO: Add PUT_ERROR?
 		return;
 	}
 
-	CANMessage msg = {
-			.recipient_id = CDH_ID,
-			.priority = 31,
-			.command_id = CMD_REPORT_WELL_LIGHT,
-			.body = {
-					.data = {
-						s_light_sequence,
-						(uint8_t)well_id,
-						(uint8_t)(light & 0x00FF),
-						(uint8_t)((light & 0xFF00) >> 8)
-					}
-			},
-	};
+	CANMessage msg;
+	msg.cmd = CMD_CDH_PROCESS_WELL_LIGHT;
+	SET_ARG(msg, 0, (uint8_t)well_id);
+	SET_ARG(msg, 1, light);
 
-	s_light_sequence++;
+	s_light_sequence++; // TODO: unused.
 
-	CANWrapper_Send_Message(msg);*/
+	CANWrapper_Transmit(NODE_CDH, &msg);
 }
 
-/*
- * @brief	reports errors to CDH if any.
- */
-static void report_errors() // TODO: generalise this function to be used for other error buffers.
-{/*
-	if (ErrorBuffer_Has_Error(&s_error_buffer))
+static void process_errors(ErrorBuffer *p_error_buffer)
+{
+	if (ErrorBuffer_Has_Error(p_error_buffer))
 	{
-		ssize_t body_length = s_error_buffer.size;
+		CANMessage error_report;
+		error_report.cmd = CMD_CDH_PROCESS_ERROR;
+		SET_ARG(error_report, 0, *p_error_buffer);
 
-		if (body_length > CAN_MESSAGE_LENGTH-1)
-			body_length = CAN_MESSAGE_LENGTH-1;
+		CANWrapper_Transmit(NODE_CDH, &error_report);
 
-		CANMessage msg = {
-				.recipient_id = CDH_ID,
-				.priority = 0,
-				.command_id = CMD_REPORT_ERROR,
-				.body = {
-						.data = {0}
-				},
-		};
-
-		memcpy(msg.body.data, &s_error_buffer.data, (size_t)body_length);
-
-		CANWrapper_Send_Message(msg);
-
-		ErrorBuffer_Clear(&s_error_buffer);
-	}*/
+		ErrorBuffer_Clear(p_error_buffer);
+	}
 }
 
 static void print_well_info()
