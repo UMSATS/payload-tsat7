@@ -90,7 +90,7 @@ bool TCA9539_Set_Pin(ExpanderID device, ExpanderPinID pin, Power power)
 	uint8_t output_register;
 	PortID port_id = (port == 0) ? OUTPUT_PORT_0 : OUTPUT_PORT_1;
 	if (!get_port(device, port_id, &output_register))
-		return -1;
+		return false;
 
 	// bitmask where the 1 is the bit we want to modify.
 	uint8_t mask = 1 << (pin - port*8);
