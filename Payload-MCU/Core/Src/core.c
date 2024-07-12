@@ -260,6 +260,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if (htim == &htim2)
 	{
+		// FIXME: these repeated calls can result in an error buffer overflow if they produce errors.
 		for (int i = WELL_0; i <= WELL_15; i++)
 		{
 			report_well_temp_data(i);
