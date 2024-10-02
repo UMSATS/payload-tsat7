@@ -7,12 +7,11 @@
  *  Purpose: this is the driver file for the TCA9539 IO expander IC.
  */
 
+#include "tuk/debug/print.h"
 #include "tca9539.h"
 #include "power.h"
 #include "assert.h"
 #include "i2c.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
 
 static const uint32_t TIMEOUT = 100;
 
@@ -41,7 +40,7 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out);
 static bool set_port(ExpanderID device, PortID port, uint8_t bitmap);
 static bool check_params(ExpanderID device, ExpanderPinID pin);
 
-#define LOG_SUBJECT "TCA9539"
+#define PRINT_SUBJECT "TCA9539"
 
 bool TCA9539_Init()
 {
@@ -138,8 +137,8 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address << 1, &msg, sizeof(msg), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to transmit port address 0x%02X to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg, device, i2c_address, status);
-		PUT_ERROR(ERR_I2C_TRANSMIT, (uint8_t)port, (uint8_t)status); // TODO: inconsistent usage with rest of code. Do we want this?
+		PRINT_ERROR("failed to transmit port address 0x%02X to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg, device, i2c_address, status);
+		//PUT_ERROR(ERR_I2C_TRANSMIT, (uint8_t)port, (uint8_t)status); // TODO: inconsistent usage with rest of code. Do we want this?
 		return false;
 	}
 
@@ -148,8 +147,8 @@ static bool get_port(ExpanderID device, PortID port, uint8_t *out)
 	status = HAL_I2C_Master_Receive(&hi2c1, i2c_address << 1, &port_register, sizeof(port_register), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to get register for port %d from device %d. (I2C address: 0x%02X, HAL error code: %d)", port, device, i2c_address, status);
-		PUT_ERROR(ERR_I2C_RECEIVE, (uint8_t)port, (uint8_t)status); // TODO: inconsistent usage with rest of code. Do we want this?
+		PRINT_ERROR("failed to get register for port %d from device %d. (I2C address: 0x%02X, HAL error code: %d)", port, device, i2c_address, status);
+		//PUT_ERROR(ERR_I2C_RECEIVE, (uint8_t)port, (uint8_t)status); // TODO: inconsistent usage with rest of code. Do we want this?
 		return false;
 	}
 
@@ -176,7 +175,7 @@ static bool set_port(ExpanderID device, PortID port, uint8_t bitmap)
 	status = HAL_I2C_Master_Transmit(&hi2c1, i2c_address << 1, msg, sizeof(msg), TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to transmit message { port address: 0x%02X, bitmap: 0x%02X } to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
+		PRINT_ERROR("failed to transmit message { port address: 0x%02X, bitmap: 0x%02X } to device %d. (I2C address: 0x%02X, HAL error code: %d)", msg[0], msg[1], device, i2c_address, status);
 
 		return false;
 	}
@@ -198,15 +197,15 @@ static bool check_params(ExpanderID device, ExpanderPinID pin)
 
 	if (device != EXPANDER_1 && device != EXPANDER_2)
 	{
-		LOG_ERROR("invalid device: %d.", device);
-		PUT_ERROR(ERR_PLD_TCA9539_INVALID_EXPANDER_ID);
+		PRINT_ERROR("invalid device: %d.", device);
+		//PUT_ERROR(ERR_PLD_TCA9539_INVALID_EXPANDER_ID);
 		return false;
 	}
 
 	if (pin < EXPANDER_PIN_0 || pin > EXPANDER_PIN_17)
 	{
-		LOG_ERROR("invalid pin: %d.", pin);
-		PUT_ERROR(ERR_PLD_TCA9539_INVALID_EXPANDER_PIN_ID);
+		PRINT_ERROR("invalid pin: %d.", pin);
+		//PUT_ERROR(ERR_PLD_TCA9539_INVALID_EXPANDER_PIN_ID);
 		return false;
 	}
 

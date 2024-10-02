@@ -37,16 +37,14 @@ static State s_state = IDLE;
 static uint8_t s_temp_sequence = 0;
 static uint8_t s_light_sequence = 0;
 
-static ErrorBuffer s_error_buffer; // default error buffer.
-
 static void on_message_received(CANMessage msg, NodeID sender, bool is_ack);
 static void on_error_occured(CANWrapper_ErrorInfo error);
 static void report_well_temp_data(WellID well_id);
 static void report_well_light_data(WellID well_id);
-static void process_errors(ErrorBuffer *p_error_buffer);
+//static void process_errors(ErrorBuffer *p_error_buffer);
 static void print_well_info();
 
-#define LOG_SUBJECT "Core"
+#define PRINT_SUBJECT "Core"
 
 void Core_Init()
 {
@@ -55,15 +53,15 @@ void Core_Init()
 
 	s_state = IDLE;
 
-	LOG_INFO("Initialising Drivers...");
+	PRINT_INFO("Initialising Drivers...");
 
-	ErrorTracker_Init(&s_error_buffer);
+	DebugLogger_Init();
 
 	success = TCA9539_Init();
 	if (!success)
 	{
-		LOG_ERROR("failed to initialise IO Expander driver.");
-		PUT_ERROR(ERR_PLD_TCA9539_INIT);
+		PRINT_ERROR("failed to initialise IO Expander driver.");
+		//PUT_ERROR(ERR_PLD_TCA9539_INIT);
 	}
 
 	CANWrapper_InitTypeDef cw_init = {
@@ -77,35 +75,38 @@ void Core_Init()
 	cw_status = CANWrapper_Init(cw_init);
 	if (cw_status != CAN_WRAPPER_HAL_OK)
 	{
-		LOG_ERROR("failed to initialise CAN wrapper.");
-		PUT_ERROR(ERR_CAN_WRAPPER_INIT, cw_status);
+		PRINT_ERROR("failed to initialise CAN wrapper.");
+		//PUT_ERROR(ERR_CAN_WRAPPER_INIT, cw_status);
 	}
 	else
 	{
 		// TODO: disable CAN in this case?
 	}
-
-	if (ErrorBuffer_Has_Error(&s_error_buffer))
+/*
+	if (ErrorBuffer_Has_Error(&s_error_buffer)) // TODO: replace with error code
 	{
 		process_errors(&s_error_buffer);
 	}
+*/
 }
 
 void Core_Update()
 {
 	MAX6822_Reset_Timer();
 
-	CANWrapper_Poll_Events();
-
+	CANWrapper_Poll_Messages();
+	CANWrapper_Poll_Errors();
+/*
 	if (ErrorBuffer_Has_Error(&s_error_buffer))
 	{
 		process_errors(&s_error_buffer);
 	}
+	*/
 }
 
 void Core_Halt()
 {
-	LOG_INFO("Halting program.");
+	PRINT_INFO("Halting program.");
 
 	// disable interrupts.
 	__disable_irq();
@@ -116,50 +117,50 @@ void Core_Halt()
 
 static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 {
-	ErrorBuffer cmd_error_buffer; // stores command errors.
-	ErrorTracker_Push_Buffer(&cmd_error_buffer);
+	LogBuffer buffer; // stores debug information.
+	DebugLogger_Push_Buffer(&buffer);
 
 	bool success = false;
 
 	switch (msg.cmd)
 	{
-	case CMD_RESET:
+	case CMD_COMM_RESET:
 	{
 		// trigger a hardware reset.
 		MAX6822_Manual_Reset();
 		Core_Halt(); // wait for the reset.
 		break;
 	}
+	/*
 	case CMD_PLD_SET_WELL_LED:
 	{
-		uint8_t well_id, power;
-		GET_ARG(msg, 0, well_id);
-		GET_ARG(msg, 1, power);
+		uint8_t well_id = GET_ARG(msg, 0, uint8_t);
+		uint8_t power   = GET_ARG(msg, 1, uint8_t);
+
 		success = LEDs_Set_LED(well_id, power);
 		break;
 	}
 	case CMD_PLD_SET_WELL_HEATER:
 	{
-		uint8_t well_id, power;
-		GET_ARG(msg, 0, well_id);
-		GET_ARG(msg, 1, power);
+		uint8_t well_id = GET_ARG(msg, 0, uint8_t);
+		uint8_t power   = GET_ARG(msg, 1, uint8_t);
+
 		success = Heaters_Set_Heater(well_id, power);
 		break;
 	}
-	case CMD_PLD_SET_WELL_TEMP:
+	case CMD_PLD_SET_SETPOINT:
 	{
-		uint8_t well_id;
-		float temp;
-		GET_ARG(msg, 0, well_id);
-		GET_ARG(msg, 1, temp);
+		uint8_t well_id = GET_ARG(msg, 0, uint8_t);
+		float temp      = GET_ARG(msg, 1, float);
 
 		// TODO: update the target temperature of one of the wells in the TCS.
 		break;
 	}
+	*/
+	/*
 	case CMD_PLD_GET_WELL_LIGHT:
 	{
-		uint8_t well_id;
-		GET_ARG(msg, 0, well_id);
+		uint8_t well_id = GET_ARG(msg, 0, uint8_t);
 
 		uint16_t light;
 		success = Photocells_Get_Light_Level(well_id, &light);
@@ -174,8 +175,7 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 	}
 	case CMD_PLD_GET_WELL_TEMP:
 	{
-		uint8_t well_id;
-		GET_ARG(msg, 0, well_id);
+		uint8_t well_id = GET_ARG(msg, 0, uint8_t);
 
 		uint16_t temp;
 		success = Thermistors_Get_Temp(well_id, &temp);
@@ -188,10 +188,10 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 		}
 		break;
 	}
-	case CMD_PLD_SET_TELEMETRY_INTERVAL:
+	*/
+	case CMD_COMM_SET_TELEMETRY_INTERVAL:
 	{
-		uint32_t period;
-		GET_ARG(msg, 0, period);
+		uint32_t period = GET_ARG(msg, 0, uint32_t);
 
 		// set interrupt timer period.
 		__HAL_TIM_SET_AUTORELOAD(&htim2, period);
@@ -206,19 +206,21 @@ static void on_message_received(CANMessage msg, NodeID sender, bool is_ack)
 	}
 	default:
 	{
-		LOG_ERROR("unknown command: 0x%02X.", msg.cmd);
-		PUT_ERROR(ERR_UNKNOWN_COMMAND, (uint8_t)msg.cmd);
+		PRINT_ERROR("unknown command: 0x%02X.", msg.cmd);
+		//PUT_ERROR(ERR_UNKNOWN_COMMAND, (uint8_t)msg.cmd);
 		break;
 	}
 	}
 
+	DebugLogger_Pop_Buffer();
+
+	/*
 	if (ErrorBuffer_Has_Error(&cmd_error_buffer))
 	{
 		success = false; // FIXME: either do something with this variable or remove it.
 		process_errors(&cmd_error_buffer);
 	}
-
-	ErrorTracker_Pop_Buffer();
+	*/
 }
 
 static void on_error_occured(CANWrapper_ErrorInfo error)
@@ -254,9 +256,8 @@ static void on_error_occured(CANWrapper_ErrorInfo error)
 // callback for timers.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	ErrorBuffer error_buffer;
-
-	ErrorTracker_Push_Buffer(&error_buffer);
+	//ErrorBuffer error_buffer;
+	//ErrorTracker_Push_Buffer(&error_buffer);
 
 	if (htim == &htim2)
 	{
@@ -271,9 +272,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 
-	process_errors(&error_buffer);
+	//process_errors(&error_buffer);
 
-	ErrorTracker_Pop_Buffer();
+	//ErrorTracker_Pop_Buffer();
 }
 
 
@@ -286,17 +287,20 @@ static void report_well_temp_data(WellID well_id)
 
 	if (!success)
 	{
-		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
+		PRINT_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
 		// TODO: Add PUT_ERROR?
 		return;
 	}
 
 	CANMessage msg;
-	msg.cmd = CMD_CDH_PROCESS_WELL_TEMP;
-	SET_ARG(msg, 0, (uint8_t)well_id); // FIXME: at some point should make well ID's uint8_t's by default. This is too easy to mess up.
-	SET_ARG(msg, 1, temp);
+	msg.cmd = CMD_CDH_PROCESS_TELEMETRY_REPORT;
+	uint8_t tel_key = CREATE_TELEMETRY_KEY(TEL_WELL_TEMP, well_id);
+	SET_ARG(msg, 0, uint8_t, tel_key);
+	SET_ARG(msg, 1, uint8_t, s_temp_sequence);
+	SET_ARG(msg, 2, uint8_t, 0); // packet #
+	SET_ARG(msg, 3, uint16_t, temp);
 
-	s_temp_sequence++; // TODO: unused.
+	s_temp_sequence++;
 
 	CANWrapper_Transmit(NODE_CDH, &msg);
 }
@@ -309,34 +313,39 @@ static void report_well_light_data(WellID well_id)
 
 	if (!success)
 	{
-		LOG_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
+		PRINT_ERROR("failed to report temperature of well %d: could not get temperature.", well_id);
 		// TODO: Add PUT_ERROR?
 		return;
 	}
 
 	CANMessage msg;
-	msg.cmd = CMD_CDH_PROCESS_WELL_LIGHT;
-	SET_ARG(msg, 0, (uint8_t)well_id);
-	SET_ARG(msg, 1, light);
+	msg.cmd = CMD_CDH_PROCESS_TELEMETRY_REPORT;
+	uint8_t tel_key = CREATE_TELEMETRY_KEY(TEL_WELL_LUMINOSITY, well_id);
+	SET_ARG(msg, 0, uint8_t, tel_key);
+	SET_ARG(msg, 1, uint8_t, s_light_sequence);
+	SET_ARG(msg, 2, uint8_t, 0); // packet #
+	SET_ARG(msg, 3, uint16_t, light);
 
-	s_light_sequence++; // TODO: unused.
+	s_light_sequence++;
 
 	CANWrapper_Transmit(NODE_CDH, &msg);
 }
 
+/*
 static void process_errors(ErrorBuffer *p_error_buffer)
 {
 	if (ErrorBuffer_Has_Error(p_error_buffer))
 	{
 		CANMessage error_report;
-		error_report.cmd = CMD_CDH_PROCESS_ERROR;
-		SET_ARG(error_report, 0, *p_error_buffer);
+		error_report.cmd = CMD_CDH_PROCESS_RUNTIME_ERROR;
+		//SET_ARG(error_report, 0, *p_error_buffer); // TODO
 
 		CANWrapper_Transmit(NODE_CDH, &error_report);
 
 		ErrorBuffer_Clear(p_error_buffer);
 	}
 }
+*/
 
 static void print_well_info()
 {
@@ -354,12 +363,12 @@ static void print_well_info()
 		light_data[i] = temp;
 	}
 
-	LOG_INFO("_________________________");
-	LOG_INFO("| WELL  | TEMPS | LIGHT |");
-	LOG_INFO("|-----------------------|");
+	PRINT_INFO("_________________________");
+	PRINT_INFO("| WELL  | TEMPS | LIGHT |");
+	PRINT_INFO("|-----------------------|");
 	for (int i = WELL_0; i <= WELL_15; i++)
 	{
-		LOG_INFO("| %6d| %6d| %6d|", i, therm_data[i], light_data[i]);
+		PRINT_INFO("| %6d| %6d| %6d|", i, therm_data[i], light_data[i]);
 	}
-	LOG_INFO("-------------------------");
+	PRINT_INFO("-------------------------");
 }

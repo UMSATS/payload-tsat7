@@ -10,10 +10,9 @@
 #include "power.h"
 #include "tca9539.h"
 #include "expander_pin_location.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
 
 #include <stdbool.h>
+#include "tuk/debug/print.h"
 
 static const ExpanderPinLocation HEATER_LOCATIONS[] = {
 		{ EXPANDER_1, EXPANDER_PIN_3  }, // HEATER 0
@@ -34,7 +33,7 @@ static const ExpanderPinLocation HEATER_LOCATIONS[] = {
 		{ EXPANDER_2, EXPANDER_PIN_13 }, // HEATER 15
 };
 
-#define LOG_SUBJECT "Heaters"
+#define PRINT_SUBJECT "Heaters"
 
 bool Heaters_Set_Heater(WellID well_id, Power power)
 {
@@ -42,8 +41,8 @@ bool Heaters_Set_Heater(WellID well_id, Power power)
 
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
-		LOG_ERROR("invalid well id: %d.", well_id);
-		PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
+		PRINT_ERROR("invalid well id: %d.", well_id);
+		//PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -52,8 +51,8 @@ bool Heaters_Set_Heater(WellID well_id, Power power)
 
 	if (!success)
 	{
-		LOG_ERROR("failed to set heater %d to %s", well_id, power ? "ON" : "OFF");
-		PUT_ERROR(ERR_PLD_TCA9539_SET_PIN);
+		PRINT_ERROR("failed to set heater %d to %s", well_id, power ? "ON" : "OFF");
+		//PUT_ERROR(ERR_PLD_TCA9539_SET_PIN);
 	}
 
 	return success;

@@ -27,8 +27,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "core.h"
-#include "tuk/debug/log.h"
 #include <stdio.h>
+#include "tuk/debug/print.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,7 +60,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define LOG_SUBJECT "Core"
+#define PRINT_SUBJECT "Core"
 
 /* Function used by printf() to direct output to SWO, prototype in syscalls.c */
 __attribute__((weak)) int _write(int file, char *ptr, int len)
@@ -176,8 +176,8 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-#undef LOG_SUBJECT
-#define LOG_SUBJECT "HAL"
+#undef PRINT_SUBJECT
+#define PRINT_SUBJECT "HAL"
 /* USER CODE END 4 */
 
 /**
@@ -190,7 +190,7 @@ void Error_Handler(void)
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
 
-  LOG_ERROR("error occurred. Halting program.\r\n");
+  PRINT_ERROR("error occurred. Halting program.\r\n");
 
   while (1)
   {}
@@ -210,7 +210,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  LOG_ERROR("invalid argument for HAL function. (in '%s':%d)\r\nlogged on line:", file, line);
+  PRINT_ERROR("invalid argument for HAL function. (in '%s':%d)\r\nlogged on line:", file, line);
 
   assertion_failed(); // see assert.c
   /* USER CODE END 6 */

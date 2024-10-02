@@ -10,7 +10,7 @@
 #include "core.h"
 #include "log.h"
 
-#define LOG_SUBJECT "Assert"
+#define PRINT_SUBJECT "Assert"
 
 // called after an assertion fails and an error message has been logged.
 void assertion_failed()

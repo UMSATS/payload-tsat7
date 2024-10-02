@@ -9,10 +9,9 @@
 #include "well_id.h"
 #include "tca9539.h"
 #include "expander_pin_location.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
 
 #include <stdbool.h>
+#include "tuk/debug/print.h"
 
 static const ExpanderPinLocation LED_LOCATIONS[] = {
 		{ EXPANDER_1, EXPANDER_PIN_2  }, // LED 0
@@ -33,7 +32,7 @@ static const ExpanderPinLocation LED_LOCATIONS[] = {
 		{ EXPANDER_2, EXPANDER_PIN_12 }, // LED 15
 };
 
-#define LOG_SUBJECT "LEDs"
+#define PRINT_SUBJECT "LEDs"
 
 bool LEDs_Set_LED(WellID well_id, Power power)
 {
@@ -41,8 +40,8 @@ bool LEDs_Set_LED(WellID well_id, Power power)
 
 	if (well_id < WELL_0 || well_id > WELL_15)
 	{
-		LOG_ERROR("invalid well id: %d.", well_id);
-		PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
+		PRINT_ERROR("invalid well id: %d.", well_id);
+		//PUT_ERROR(ERR_PLD_INVALID_WELL_ID);
 		return false;
 	}
 
@@ -51,8 +50,8 @@ bool LEDs_Set_LED(WellID well_id, Power power)
 
 	if (!success)
 	{
-		LOG_ERROR("failed to set LED %d to %s", well_id, power ? "ON" : "OFF");
-		PUT_ERROR(ERR_PLD_TCA9539_SET_PIN);
+		PRINT_ERROR("failed to set LED %d to %s", well_id, power ? "ON" : "OFF");
+		//PUT_ERROR(ERR_PLD_TCA9539_SET_PIN);
 	}
 
 	return success;

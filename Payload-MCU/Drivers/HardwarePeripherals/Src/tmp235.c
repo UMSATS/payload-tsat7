@@ -8,15 +8,14 @@
 #include "tmp235.h"
 #include "assert.h"
 #include "adc.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "tuk/debug/print.h"
 
 static const uint32_t TIMEOUT = 100; // in ms
 
-#define LOG_SUBJECT "PCB Sensor"
+#define PRINT_SUBJECT "PCB Sensor"
 
 bool TMP235_Read_Temp(uint16_t *out)
 {
@@ -25,8 +24,8 @@ bool TMP235_Read_Temp(uint16_t *out)
 	status = HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to calibrate. (HAL error code: %d)", status);
-		PUT_ERROR(ERR_ADC_CALIBRATION_START, status);
+		PRINT_ERROR("failed to calibrate. (HAL error code: %d)", status);
+		//PUT_ERROR(ERR_ADC_CALIBRATION_START, status);
 		return false;
 	}
 
@@ -34,16 +33,16 @@ bool TMP235_Read_Temp(uint16_t *out)
 	status = HAL_ADC_Start(&hadc1);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to start conversion. (HAL error code: %d)", status);
-		PUT_ERROR(ERR_ADC_START, status);
+		PRINT_ERROR("failed to start conversion. (HAL error code: %d)", status);
+		//PUT_ERROR(ERR_ADC_START, status);
 		return false;
 	}
 
 	status = HAL_ADC_PollForConversion(&hadc1, TIMEOUT);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to complete conversion. (HAL error code: %d)", status);
-		PUT_ERROR(ERR_ADC_POLL, status);
+		PRINT_ERROR("failed to complete conversion. (HAL error code: %d)", status);
+		//PUT_ERROR(ERR_ADC_POLL, status);
 		return false;
 	}
 
@@ -53,8 +52,8 @@ bool TMP235_Read_Temp(uint16_t *out)
 	status = HAL_ADC_Stop(&hadc1);
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to complete conversion. (HAL error code: %d)", status);
-		PUT_ERROR(ERR_ADC_GET_VALUE, status);
+		PRINT_ERROR("failed to complete conversion. (HAL error code: %d)", status);
+		//PUT_ERROR(ERR_ADC_GET_VALUE, status);
 		return false;
 	}
 

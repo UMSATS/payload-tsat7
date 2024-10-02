@@ -9,18 +9,17 @@
 
 #include "tca9548.h"
 #include "assert.h"
-#include "tuk/debug/log.h"
-#include "tuk/error_tracker.h"
 
 #include "i2c.h"
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "tuk/debug/print.h"
 
 static const uint16_t I2C_ADDRESS = 0x70 << 1;  // I2C address of the multiplexer
 static const uint32_t TIMEOUT = 100;       // in ms
 
-#define LOG_SUBJECT "TCA9548"
+#define PRINT_SUBJECT "TCA9548"
 
 bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 {
@@ -28,8 +27,8 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 
 	if (channel < MUX_CHANNEL_0 || channel > MUX_CHANNEL_5)
 	{
-		LOG_ERROR("invalid mux channel: %d.", channel);
-		PUT_ERROR(ERR_PLD_TCA9548_INVALID_CHANNEL);
+		PRINT_ERROR("invalid mux channel: %d.", channel);
+		//PUT_ERROR(ERR_PLD_TCA9548_INVALID_CHANNEL);
 		return false;
 	}
 
@@ -41,8 +40,8 @@ bool TCA9548_Set_I2C_Channel(MuxChannel channel)
 
 	if (status != HAL_OK)
 	{
-		LOG_ERROR("failed to switch to I2C channel %d. (HAL error code: %d)", channel, status);
-		PUT_ERROR(ERR_I2C_TRANSMIT, status);
+		PRINT_ERROR("failed to switch to I2C channel %d. (HAL error code: %d)", channel, status);
+		//PUT_ERROR(ERR_I2C_TRANSMIT, status);
 		return false;
 	}
 
